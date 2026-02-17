@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel Executivo - Pratique SI</title>
     
-    <!-- Favicon (Opcional) -->
+    <!-- Favicon (Opcional: Troque este href pela URL da sua logo se desejar) -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💪</text></svg>">
 
     <!-- React & ReactDOM -->
@@ -78,7 +78,7 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo, useCallback } = React;
 
-        // --- GEMINI API CONFIG (EMBUTIDA NO CÓDIGO) ---
+        // --- GEMINI API CONFIG (EMBUTIDA) ---
         const defaultApiKey = "AIzaSyDnHkC_oGeztNjZ7wNq9vOAeot9cml3SJ4"; 
 
         // --- ICONS ---
