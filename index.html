@@ -791,7 +791,7 @@
                     </header>
 
                     <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10 animate-up" style={{animationDelay: '0.1s'}}>
-                        <FileCard title="1. Vendas (Período)" subtext="Autodetecção: Planilhas Novas ou Antigas" onUpload={handleSalesUpload} status={!!rawSales} />
+                        <FileCard title="1. Faturamento (Período)" subtext="Autodetecção: não pode colocar o faturamento recebido" onUpload={handleSalesUpload} status={!!rawSales} />
                         <FileCard title="2. Recebimentos" subtext="Busca coluna 'Pago' ou 'Recebido'" onUpload={handleReceiptsUpload} status={!!rawReceipts} />
                         <FileCard title="3. Alunos Ativos" subtext="Busca coluna 'Plano'" onUpload={handleActivesUpload} status={!!rawActives} />
                     </section>
