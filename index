@@ -2,11 +2,29 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Painel Executivo - Pratique SI</title>
     
-    <!-- Favicon (Opcional: Troque este href pela URL da sua logo se desejar) -->
+    <!-- Meta tags para PWA (Parecer aplicativo nativo) -->
+    <meta name="theme-color" content="#ED1C24">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💪</text></svg>">
+
+    <!-- Manifesto embutido para instalação -->
+    <link rel="manifest" href='data:application/manifest+json,{
+      "name": "Pratique SI",
+      "short_name": "Pratique",
+      "start_url": ".",
+      "display": "standalone",
+      "background_color": "#F3F4F6",
+      "theme_color": "#ED1C24",
+      "icons": [{
+        "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💪</text></svg>",
+        "sizes": "192x192",
+        "type": "image/svg+xml"
+      }]
+    }' />
 
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -21,7 +39,7 @@
     <!-- SheetJS -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
-    <!-- Markdown Parser (Marked) for AI Response -->
+    <!-- Markdown Parser -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <!-- Google Fonts -->
@@ -49,7 +67,7 @@
     </script>
     
     <style>
-        body { background-color: #F3F4F6; }
+        body { background-color: #F3F4F6; -webkit-tap-highlight-color: transparent; }
         .glass { background: white; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .card-shadow { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
         .animate-up { animation: slideUp 0.5s ease-out forwards; opacity: 0; transform: translateY(20px); }
@@ -79,6 +97,7 @@
         const { useState, useEffect, useMemo, useCallback } = React;
 
         // --- GEMINI API CONFIG (EMBUTIDA) ---
+        // Verifique se a chave está ativa no Google AI Studio
         const defaultApiKey = "AIzaSyDnHkC_oGeztNjZ7wNq9vOAeot9cml3SJ4"; 
 
         // --- ICONS ---
