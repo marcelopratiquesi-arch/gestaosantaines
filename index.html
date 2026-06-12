@@ -26,9 +26,9 @@
       }]
     }' />
 
-    <!-- React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- React & ReactDOM (Atualizado para estabilidade de produção) -->
+    <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
     
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -97,7 +97,6 @@
         const { useState, useEffect, useMemo, useCallback } = React;
 
         // --- GEMINI API CONFIG (EMBUTIDA) ---
-        // Verifique se a chave está ativa no Google AI Studio
         const defaultApiKey = "AIzaSyDnHkC_oGeztNjZ7wNq9vOAeot9cml3SJ4"; 
 
         // --- ICONS ---
@@ -105,6 +104,7 @@
             Upload: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>,
             Money: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
             Users: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>,
+            CreditCard: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>,
             Leaf: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
             Check: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>,
             Star: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>,
@@ -168,7 +168,7 @@
             if (headerRow) {
                 const headers = headerRow.map(h => String(h).toUpperCase());
                 headers.forEach((h, i) => {
-                    if (h.includes('VALOR') || h.includes('TOTAL') || h.includes('PAGO')) valIdx = i;
+                    if (h.includes('VALOR') || h.includes('TOTAL') || h.includes('PAGO') || h.includes('RECEBER')) valIdx = i;
                     if (h.includes('PLANO') || h.includes('PRODUTO') || h.includes('DESCRIÇÃO')) planIdx = i;
                 });
             }
@@ -239,7 +239,7 @@
                             />
                         </div>
 
-                        <div className="flex-1 overflow-hidden p-4 flex gap-4">
+                        <div className="flex-1 overflow-hidden p-4 flex flex-col md:flex-row gap-4">
                             <div className="flex-1 flex flex-col bg-red-50 rounded-xl border border-red-100 overflow-hidden">
                                 <div className="p-3 bg-red-100 text-pratique-red font-bold text-center border-b border-red-200 uppercase text-sm">
                                     Santa Inês 1 ({si1Plans.length})
@@ -250,7 +250,7 @@
                                             <span className="text-sm font-medium text-gray-700 truncate mr-2" title={plan}>{plan}</span>
                                             <button 
                                                 onClick={() => onToggleOverride(plan, 'SI2')}
-                                                className="text-gray-400 hover:text-gray-900 bg-gray-100 hover:bg-gray-300 p-1 rounded transition-colors"
+                                                className="text-gray-400 hover:text-gray-900 bg-gray-100 hover:bg-gray-300 p-1 rounded transition-colors flex-shrink-0"
                                                 title="Mover para Santa Inês 2"
                                             >
                                                 <Icons.Swap />
@@ -270,7 +270,7 @@
                                         <div key={plan} className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 flex justify-between items-center group hover:shadow-md transition-all">
                                             <button 
                                                 onClick={() => onToggleOverride(plan, 'SI1')}
-                                                className="text-gray-400 hover:text-pratique-red bg-gray-100 hover:bg-red-100 p-1 rounded transition-colors"
+                                                className="text-gray-400 hover:text-pratique-red bg-gray-100 hover:bg-red-100 p-1 rounded transition-colors flex-shrink-0"
                                                 title="Mover para Santa Inês 1"
                                             >
                                                 <Icons.Swap />
@@ -395,8 +395,8 @@
             );
         };
 
-        const FileCard = ({ title, type, onUpload, status, subtext }) => (
-            <div className={`relative p-4 rounded-xl border-2 border-dashed transition-all ${status ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-pratique-red hover:bg-white'} group`}>
+        const FileCard = ({ title, type, onUpload, status, subtext, colorClass = "hover:border-pratique-red hover:bg-white", activeColorClass = "border-green-500 bg-green-50", iconColorClass = "group-hover:text-pratique-red group-hover:bg-red-50" }) => (
+            <div className={`relative p-4 rounded-xl border-2 border-dashed transition-all ${status ? activeColorClass : `border-gray-300 ${colorClass}`} group flex-1`}>
                 <input type="file" accept=".xlsx,.xls,.csv" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => { if (e.target.files[0]) onUpload(e.target.files[0]); }} />
                 <div className="flex flex-col items-center justify-center text-center">
                     {status ? (
@@ -406,8 +406,8 @@
                         </>
                     ) : (
                         <>
-                            <div className="bg-gray-100 text-gray-500 p-2 rounded-full mb-2 group-hover:bg-red-50 group-hover:text-pratique-red"><Icons.Upload /></div>
-                            <span className="font-bold text-gray-600 text-sm group-hover:text-pratique-red">{title}</span>
+                            <div className={`bg-gray-100 text-gray-500 p-2 rounded-full mb-2 transition-colors ${iconColorClass}`}><Icons.Upload /></div>
+                            <span className={`font-bold text-gray-600 text-sm transition-colors ${iconColorClass.replace('bg-', 'text-').split(' ')[0]}`}>{title}</span>
                             <span className="text-xs text-gray-400 mt-1">{subtext}</span>
                         </>
                     )}
@@ -415,7 +415,7 @@
             </div>
         );
 
-        const UnitColumn = ({ unit, sales, receipts, actives, isSI2, onOpenModal }) => {
+        const UnitColumn = ({ unit, sales, receipts, receivables, actives, isSI2, onOpenModal }) => {
             const bgHeader = isSI2 ? 'bg-gray-900' : 'bg-pratique-red';
             const textClass = isSI2 ? 'text-gray-900' : 'text-pratique-red';
 
@@ -424,7 +424,9 @@
                     <div className={`p-4 rounded-t-xl ${bgHeader} text-white shadow-lg`}>
                         <h2 className="text-3xl font-display font-bold text-center tracking-wide">{unit}</h2>
                     </div>
-                    <div className="bg-white p-6 rounded-xl card-shadow border-l-4 border-gray-200 relative overflow-hidden group hover:border-l-4 transition-all" style={{borderColor: isSI2 ? '#111827' : '#ED1C24'}}>
+                    
+                    {/* Card Faturamento */}
+                    <div className="bg-white p-6 rounded-xl card-shadow border-l-4 border-gray-200 relative overflow-hidden group transition-all" style={{borderColor: isSI2 ? '#111827' : '#ED1C24'}}>
                         <div className="flex justify-between items-start mb-2">
                             <span className="text-gray-500 font-bold text-sm uppercase tracking-wider">Faturamento (Período)</span>
                             <div className={`p-2 rounded-lg ${isSI2 ? 'bg-gray-100 text-gray-800' : 'bg-red-50 text-red-600'}`}><Icons.Money /></div>
@@ -465,6 +467,8 @@
                             </div>
                         </div>
                     </div>
+
+                    {/* Card Recebimento (Caixa) */}
                     <div className="bg-white p-6 rounded-xl card-shadow border-l-4 border-green-500">
                         <div className="flex justify-between items-start mb-2">
                             <span className="text-gray-500 font-bold text-sm uppercase tracking-wider">Recebimento (Caixa)</span>
@@ -475,6 +479,20 @@
                         </div>
                         <p className="text-xs text-gray-400 mt-2">Valor efetivamente baixado</p>
                     </div>
+
+                    {/* Novo Card: Recebíveis (A compensar) */}
+                    <div className="bg-white p-6 rounded-xl card-shadow border-l-4 border-purple-500">
+                        <div className="flex justify-between items-start mb-2">
+                            <span className="text-gray-500 font-bold text-sm uppercase tracking-wider">Recebíveis</span>
+                            <div className="p-2 rounded-lg bg-purple-50 text-purple-600"><Icons.CreditCard /></div>
+                        </div>
+                        <div className="text-3xl font-display font-bold text-gray-800">
+                            {formatCurrency(receivables?.total || 0)}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-2">Valores compensados/a receber</p>
+                    </div>
+
+                    {/* Card Alunos Ativos */}
                     <div className="bg-white p-6 rounded-xl card-shadow border-l-4 border-blue-500">
                          <div className="flex justify-between items-start mb-2">
                             <span className="text-gray-500 font-bold text-sm uppercase tracking-wider">Alunos Ativos</span>
@@ -489,9 +507,10 @@
             );
         };
 
-        const FooterSummary = ({ sales, receipts, actives, onGenerateAiReport }) => {
+        const FooterSummary = ({ sales, receipts, receivables, actives, onGenerateAiReport }) => {
             const totalFaturamento = (sales?.si1.total || 0) + (sales?.si2.total || 0);
             const totalRecebido = (receipts?.si1.total || 0) + (receipts?.si2.total || 0);
+            const totalRecebiveis = (receivables?.si1.total || 0) + (receivables?.si2.total || 0);
             const totalAtivos = (actives?.si1.count || 0) + (actives?.si2.count || 0);
             const totalNutri = (sales?.si1.nutriCount || 0) + (sales?.si2.nutriCount || 0);
             const totalPlus = (sales?.si1.plusCount || 0) + (sales?.si2.plusCount || 0);
@@ -512,26 +531,30 @@
                             </button>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 md:gap-8">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                             <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                                <p className="text-gray-400 text-xs font-bold uppercase mb-1">Faturamento Total</p>
-                                <p className="text-2xl xl:text-3xl font-display font-bold text-white break-words">{formatCurrency(totalFaturamento)}</p>
+                                <p className="text-gray-400 text-[10px] font-bold uppercase mb-1">Faturamento Total</p>
+                                <p className="text-xl xl:text-2xl font-display font-bold text-white break-words">{formatCurrency(totalFaturamento)}</p>
                             </div>
                             <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                                <p className="text-gray-400 text-xs font-bold uppercase mb-1">Recebimento Total</p>
-                                <p className="text-2xl xl:text-3xl font-display font-bold text-green-400 break-words">{formatCurrency(totalRecebido)}</p>
+                                <p className="text-gray-400 text-[10px] font-bold uppercase mb-1">Recebimento (Caixa)</p>
+                                <p className="text-xl xl:text-2xl font-display font-bold text-green-400 break-words">{formatCurrency(totalRecebido)}</p>
+                            </div>
+                            <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
+                                <p className="text-gray-400 text-[10px] font-bold uppercase mb-1">Recebíveis Total</p>
+                                <p className="text-xl xl:text-2xl font-display font-bold text-purple-400 break-words">{formatCurrency(totalRecebiveis)}</p>
                             </div>
                              <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                                <p className="text-gray-400 text-xs font-bold uppercase mb-1">Total Nutri/Combo</p>
-                                <p className="text-2xl xl:text-3xl font-display font-bold text-green-200">{formatNumber(totalNutri)}</p>
+                                <p className="text-gray-400 text-[10px] font-bold uppercase mb-1">Total Nutri/Combo</p>
+                                <p className="text-xl xl:text-2xl font-display font-bold text-green-200">{formatNumber(totalNutri)}</p>
                             </div>
                             <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                                <p className="text-gray-400 text-xs font-bold uppercase mb-1">Total Plus</p>
-                                <p className="text-2xl xl:text-3xl font-display font-bold text-yellow-400">{formatNumber(totalPlus)}</p>
+                                <p className="text-gray-400 text-[10px] font-bold uppercase mb-1">Total Plus</p>
+                                <p className="text-xl xl:text-2xl font-display font-bold text-yellow-400">{formatNumber(totalPlus)}</p>
                             </div>
                              <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                                <p className="text-gray-400 text-xs font-bold uppercase mb-1">Total Ativos</p>
-                                <p className="text-2xl xl:text-3xl font-display font-bold text-blue-400">{formatNumber(totalAtivos)}</p>
+                                <p className="text-gray-400 text-[10px] font-bold uppercase mb-1">Total Ativos</p>
+                                <p className="text-xl xl:text-2xl font-display font-bold text-blue-400">{formatNumber(totalAtivos)}</p>
                             </div>
                         </div>
                     </div>
@@ -542,32 +565,29 @@
         const Dashboard = () => {
             const [rawSales, setRawSales] = useState(null);
             const [rawReceipts, setRawReceipts] = useState(null);
+            const [rawReceivables, setRawReceivables] = useState(null);
             const [rawActives, setRawActives] = useState(null);
             
             const [salesData, setSalesData] = useState(null);
             const [receiptsData, setReceiptsData] = useState(null);
+            const [receivablesData, setReceivablesData] = useState(null);
             const [activesData, setActivesData] = useState(null);
             
-            // --- PERSISTÊNCIA (LOAD) ---
-            // Carrega do LocalStorage se existir, senão usa padrão
             const [planOverrides, setPlanOverrides] = useState(() => {
                 try {
                     const saved = localStorage.getItem('plan_overrides');
                     return saved ? JSON.parse(saved) : {};
                 } catch (e) { return {}; }
             });
-            // Removed localStorage for API key as it is now hardcoded.
 
             const [allPlans, setAllPlans] = useState(new Set());
             const [configOpen, setConfigOpen] = useState(false);
             
-            // Modal States
             const [modalOpen, setModalOpen] = useState(false);
             const [modalTitle, setModalTitle] = useState('');
             const [modalItems, setModalItems] = useState([]);
             const [modalColor, setModalColor] = useState('bg-gray-800');
 
-            // AI Report States
             const [aiModalOpen, setAiModalOpen] = useState(false);
             const [aiLoading, setAiLoading] = useState(false);
             const [aiReport, setAiReport] = useState('');
@@ -579,15 +599,11 @@
                 setModalOpen(true);
             };
 
-            // --- PERSISTÊNCIA (SAVE) ---
-            // Salva sempre que mudar
             useEffect(() => {
                 localStorage.setItem('plan_overrides', JSON.stringify(planOverrides));
             }, [planOverrides]);
 
-            // --- AI LOGIC ---
             const generateAiReport = async () => {
-                // Remove alert check since apiKey is hardcoded
                 setAiModalOpen(true);
                 setAiLoading(true);
 
@@ -595,6 +611,7 @@
                     SI1: {
                         faturamento: salesData?.si1.total || 0,
                         recebimento: receiptsData?.si1.total || 0,
+                        recebiveis: receivablesData?.si1.total || 0,
                         ativos: activesData?.si1.count || 0,
                         nutri: salesData?.si1.nutriCount || 0,
                         plus: salesData?.si1.plusCount || 0
@@ -602,6 +619,7 @@
                     SI2: {
                         faturamento: salesData?.si2.total || 0,
                         recebimento: receiptsData?.si2.total || 0,
+                        recebiveis: receivablesData?.si2.total || 0,
                         ativos: activesData?.si2.count || 0,
                         nutri: salesData?.si2.nutriCount || 0,
                         plus: salesData?.si2.plusCount || 0
@@ -615,15 +633,16 @@
                     DADOS:
                     - Faturamento (Vendas Período): SI1: ${formatCurrency(stats.SI1.faturamento)}, SI2: ${formatCurrency(stats.SI2.faturamento)}
                     - Recebimento Real (Caixa): SI1: ${formatCurrency(stats.SI1.recebimento)}, SI2: ${formatCurrency(stats.SI2.recebimento)}
+                    - Recebíveis (A Compensar): SI1: ${formatCurrency(stats.SI1.recebiveis)}, SI2: ${formatCurrency(stats.SI2.recebiveis)}
                     - Base de Alunos Ativos: SI1: ${stats.SI1.ativos}, SI2: ${stats.SI2.ativos}
                     - Vendas Plano Nutri/Combo: SI1: ${stats.SI1.nutri}, SI2: ${stats.SI2.nutri}
                     - Vendas Plano Plus: SI1: ${stats.SI1.plus}, SI2: ${stats.SI2.plus}
 
                     TAREFA:
                     1. Crie um resumo executivo comparando o desempenho das duas unidades.
-                    2. Analise a diferença entre Faturamento (Venda) e Recebimento (Caixa). Se a diferença for grande, alerte sobre possível inadimplência ou vendas futuras.
+                    2. Analise a relação entre Faturamento, Caixa (Recebimento) e Valores a Receber (Recebíveis).
                     3. Qual unidade tem melhor performance de produtos agregados (Nutri/Plus) proporcionalmente ao faturamento?
-                    4. Sugira 3 ações estratégicas para o gestor.
+                    4. Sugira 3 ações estratégicas para o gestor melhorar a conversão de Recebíveis em Caixa.
 
                     Formate a resposta em Markdown limpo e profissional. Seja direto e use bullet points.
                 `;
@@ -651,8 +670,9 @@
             useEffect(() => {
                 if (rawSales) calculateSales(rawSales);
                 if (rawReceipts) calculateReceipts(rawReceipts);
+                if (rawReceivables) calculateReceivables(rawReceivables);
                 if (rawActives) calculateActives(rawActives);
-            }, [planOverrides, rawSales, rawReceipts, rawActives]);
+            }, [planOverrides, rawSales, rawReceipts, rawReceivables, rawActives]);
 
             const updatePlanList = (newPlans) => {
                 setAllPlans(prev => {
@@ -704,6 +724,18 @@
                 setReceiptsData(stats);
             };
 
+            const calculateReceivables = (data) => {
+                let stats = { si1: { total: 0 }, si2: { total: 0 } };
+                data.rows.forEach(row => {
+                    const val = parseMoney(row[data.valIdx]);
+                    const plan = row[data.planIdx];
+                    if(!plan) return;
+                    const unit = getUnit(plan, planOverrides);
+                    if (unit === 'SI2') stats.si2.total += val; else stats.si1.total += val;
+                });
+                setReceivablesData(stats);
+            };
+
             const calculateActives = (data) => {
                 let stats = { si1: { count: 0 }, si2: { count: 0 } };
                 data.rows.forEach(row => {
@@ -743,6 +775,32 @@
                 reader.readAsBinaryString(file);
             };
 
+            // Nova Função de Upload para Recebíveis
+            const handleReceivablesUpload = (file) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const wb = XLSX.read(e.target.result, { type: 'binary' });
+                    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+                    const hIdx = findHeader(json, ['PLANO', 'VALOR', 'RECEBER', 'COMPENSADO']);
+                    
+                    // Defaults baseados na solicitação: Plano na U(20), Valor na H(7)
+                    let planIdx = 20; 
+                    let valIdx = 7;   
+
+                    if (json[hIdx]) {
+                        const smart = findSmartColumns(json[hIdx], json[hIdx+1]);
+                        // Se encontrou algo de forma inteligente que não seja o padrão da função findSmartColumns (12 e 19)
+                        if(smart.planIdx !== 12) planIdx = smart.planIdx;
+                        if(smart.valIdx !== 19) valIdx = smart.valIdx;
+                    }
+
+                    const rows = json.slice(hIdx + 1).filter(r => r && r[planIdx]);
+                    updatePlanList(rows.map(r => r[planIdx]).filter(Boolean));
+                    setRawReceivables({ rows, planIdx, valIdx });
+                };
+                reader.readAsBinaryString(file);
+            };
+
             const handleActivesUpload = (file) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -764,14 +822,14 @@
 
             const reset = () => {
                 if(confirm("Deseja realmente limpar todos os dados carregados?")) {
-                    setRawSales(null); setRawReceipts(null); setRawActives(null);
-                    setSalesData(null); setReceiptsData(null); setActivesData(null);
+                    setRawSales(null); setRawReceipts(null); setRawReceivables(null); setRawActives(null);
+                    setSalesData(null); setReceiptsData(null); setReceivablesData(null); setActivesData(null);
                     setAllPlans(new Set());
                 }
             };
 
             return (
-                <div className="min-h-screen p-4 md:p-8 max-w-7xl mx-auto flex flex-col">
+                <div className="min-h-screen p-4 md:p-8 max-w-[1400px] mx-auto flex flex-col">
                     <header className="mb-8 flex flex-col md:flex-row justify-between items-center gap-4 animate-up">
                         <div className="flex items-center gap-3">
                             <div className="bg-pratique-red text-white p-3 rounded-lg font-display font-bold text-2xl">P</div>
@@ -790,20 +848,29 @@
                         </div>
                     </header>
 
-                    <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10 animate-up" style={{animationDelay: '0.1s'}}>
-                        <FileCard title="1. Faturamento (Período)" subtext="Autodetecção: não pode colocar o faturamento recebido" onUpload={handleSalesUpload} status={!!rawSales} />
-                        <FileCard title="2. Recebimentos" subtext="Busca coluna 'Pago' ou 'Recebido'" onUpload={handleReceiptsUpload} status={!!rawReceipts} />
-                        <FileCard title="3. Alunos Ativos" subtext="Geral de Clientes 'Plano'" onUpload={handleActivesUpload} status={!!rawActives} />
+                    {/* Modificado para grid com 4 colunas em telas médias/grandes */}
+                    <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10 animate-up" style={{animationDelay: '0.1s'}}>
+                        <FileCard title="1. Faturamento" subtext="Vendas no Período" onUpload={handleSalesUpload} status={!!rawSales} />
+                        <FileCard title="2. Recebimento" subtext="Valores em Caixa" onUpload={handleReceiptsUpload} status={!!rawReceipts} />
+                        <FileCard 
+                            title="3. Recebíveis" 
+                            subtext="Planos (Col U) e Valor (Col H)" 
+                            onUpload={handleReceivablesUpload} 
+                            status={!!rawReceivables}
+                            colorClass="hover:border-purple-500 hover:bg-white"
+                            iconColorClass="group-hover:text-purple-600 group-hover:bg-purple-50" 
+                        />
+                        <FileCard title="4. Ativos" subtext="Geral de Clientes" onUpload={handleActivesUpload} status={!!rawActives} />
                     </section>
 
                     <main className="flex flex-col md:flex-row gap-8 animate-up flex-grow" style={{animationDelay: '0.2s'}}>
-                        <UnitColumn unit="SANTA INÊS 1" sales={salesData?.si1} receipts={receiptsData?.si1} actives={activesData?.si1} isSI2={false} onOpenModal={openModal} />
+                        <UnitColumn unit="SANTA INÊS 1" sales={salesData?.si1} receipts={receiptsData?.si1} receivables={receivablesData?.si1} actives={activesData?.si1} isSI2={false} onOpenModal={openModal} />
                         <div className="hidden md:block w-px bg-gray-300 self-stretch"></div>
-                        <UnitColumn unit="SANTA INÊS 2" sales={salesData?.si2} receipts={receiptsData?.si2} actives={activesData?.si2} isSI2={true} onOpenModal={openModal} />
+                        <UnitColumn unit="SANTA INÊS 2" sales={salesData?.si2} receipts={receiptsData?.si2} receivables={receivablesData?.si2} actives={activesData?.si2} isSI2={true} onOpenModal={openModal} />
                     </main>
 
-                    {(salesData || receiptsData || activesData) && (
-                        <FooterSummary sales={salesData} receipts={receiptsData} actives={activesData} onGenerateAiReport={generateAiReport} />
+                    {(salesData || receiptsData || receivablesData || activesData) && (
+                        <FooterSummary sales={salesData} receipts={receiptsData} receivables={receivablesData} actives={activesData} onGenerateAiReport={generateAiReport} />
                     )}
 
                     <DetailModal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={modalTitle} items={modalItems} colorClass={modalColor} />
