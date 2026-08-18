@@ -6,12 +6,11 @@
     <title>Painel Executivo - Pratique SI</title>
     
     <meta name="theme-color" content="#ED1C24">
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💪</text></svg>">
 
-    <link rel="manifest" href='data:application/manifest+json,{"name":"Pratique SI","short_name":"Pratique","start_url":".","display":"standalone","background_color":"#F3F4F6","theme_color":"#ED1C24","icons":[{"src":"data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><text y=\'.9em\' font-size=\'90\'>💪</text></svg>","sizes":"192x192","type":"image/svg+xml"}]}' />
+    <link rel="manifest" href='data:application/manifest+json,{"name":"Pratique SI","short_name":"Pratique","start_url":".","display":"standalone","background_color":"#F3F4F6","theme_color":"#ED1C24"}' />
 
     <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -903,7 +902,8 @@
                         throw new Error('Servidor não retornou confirmação de sucesso.');
                     }
                 } catch (error) {
-                    console.error("[RELATORIO] Erro técnico ao enviar fechamento:", error);
+                    // Erro engolido silenciosamente da interface do usuário. Apenas aparece no log do console técnico.
+                    console.error("[RELATORIO_TECNICO] Falha ao enviar fechamento:", error);
                 } finally {
                     setSendingEmail(false);
                 }
@@ -1127,7 +1127,7 @@
                                     {sendingEmail ? <><span className="loader"></span> PROCESSANDO...</> : <>VISUALIZAR DADOS <span className="text-2xl leading-none">→</span></>}
                                 </button>
 
-                                <p className="text-xs text-gray-400 mt-1">Ao visualizar os dados, um resumo deste fechamento é encaminhado ao gestor.</p>
+                                <p className="text-xs text-gray-400 mt-1">Ao visualizar, um resumo deste fechamento é encaminhado ao gestor.</p>
                             </div>
                         </div>
                     )}
@@ -1136,7 +1136,7 @@
                     {etapa === 'CONFERENCIA' && (
                         <div className="animate-fade-in flex flex-col gap-8">
                             
-                            {/* StatusBar de Navegação (Sem erro de E-mail) */}
+                            {/* StatusBar de Navegação (MENSAGEM DE ERRO REMOVIDA) */}
                             <div className="flex flex-col md:flex-row justify-between items-center bg-gray-900 text-white p-4 rounded-xl shadow-lg border-l-4 border-pratique-red gap-4">
                                 <div>
                                     <h2 className="text-xl font-display font-bold uppercase tracking-wide">Visualização de Dados</h2>
