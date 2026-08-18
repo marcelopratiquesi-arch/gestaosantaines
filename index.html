@@ -6,12 +6,9 @@
     <title>Painel Executivo - Pratique SI</title>
     
     <meta name="theme-color" content="#ED1C24">
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💪</text></svg>">
-
-    <link rel="manifest" href='data:application/manifest+json,{"name":"Pratique SI","short_name":"Pratique","start_url":".","display":"standalone","background_color":"#F3F4F6","theme_color":"#ED1C24","icons":[{"src":"data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><text y=\'.9em\' font-size=\'90\'>💪</text></svg>","sizes":"192x192","type":"image/svg+xml"}]}' />
 
     <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -184,7 +181,7 @@
             return 0;
         };
 
-        // --- Config Modal ---
+        // --- Config Modal (Acessível independente da etapa) ---
         const ConfigModal = ({ isOpen, onClose, allPlans, entradasPlans, unitOverrides, groupOverrides, onToggleUnitOverride, onToggleGroupOverride }) => {
             const [searchTerm, setSearchTerm] = useState('');
             const [activeTab, setActiveTab] = useState('unidades');
@@ -485,6 +482,152 @@
             );
         };
 
+        const WhatsAppReportModal = ({ isOpen, onClose, flags, salesData, receiptsData, activesData, paidActivesData, entradasData, canceladosData, receivablesData, visitantesData }) => {
+            const [reportUnit, setReportUnit] = useState('AMBAS');
+            const [copySuccess, setCopySuccess] = useState(false);
+
+            if (!isOpen) return null;
+
+            const generateReportText = (unitMode) => {
+                let text = '';
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('pt-BR');
+
+                const renderSI = (unitName, sales, receipts, actives, paidActives, entradas, cancelados, receivables, isSI2) => {
+                    let out = `📍 *${unitName}*\n\n`;
+                    
+                    if (flags.hasSales) {
+                        out += `💰 *FATURAMENTO*\n${formatCurrency(sales?.total)}\n• ${formatNumber(sales?.count)} vendas\n• Nutri/Combo: ${formatNumber(sales?.nutriCount)}\n• Plus: ${formatNumber(sales?.plusCount)}\n\n`;
+                    }
+                    if (flags.hasReceipts) {
+                        out += `💵 *RECEBIMENTO*\n${formatCurrency(receipts?.total)}\n\n`;
+                        if (isSI2 && receipts?.personalClassCount !== undefined) {
+                            out += `🏋️ *PERSONAL CLASS*\n${formatNumber(receipts.personalClassCount)}\n\n`;
+                        }
+                    }
+                    if (flags.hasActives) {
+                        out += `👥 *ATIVOS*\n${formatNumber(actives?.count)}\n\n`;
+                    }
+                    if (flags.hasPaidActives) {
+                        out += `✅ *ATIVOS PAGOS*\n${formatNumber(paidActives?.count)}\n\n`;
+                    }
+                    if (flags.hasEntradas) {
+                        out += `📥 *ENTRADAS*\n${formatNumber(entradas?.count)}\n`;
+                        if (entradas?.grupos) {
+                            out += `• Nutri: ${formatNumber(entradas.grupos.NUTRI.count)}\n`;
+                            out += `• Plus: ${formatNumber(entradas.grupos.PLUS.count)}\n`;
+                            out += `• Fit: ${formatNumber(entradas.grupos.FIT.count)}\n`;
+                            out += `• Class: ${formatNumber(entradas.grupos.CLASS.count)}\n`;
+                            out += `• Outros: ${formatNumber(entradas.grupos.OUTROS.count)}\n`;
+                        }
+                        out += '\n';
+                    }
+                    if (flags.hasCancelados) {
+                        out += `🚫 *CANCELADOS*\n${formatNumber(cancelados?.count)}\n\n`;
+                    }
+                    if (flags.hasReceivables) {
+                        out += `💳 *RECEBÍVEIS*\n${formatCurrency(receivables?.total)}\n\n`;
+                    }
+                    return out;
+                };
+
+                if (unitMode === 'SI1' || unitMode === 'AMBAS') {
+                    text += renderSI('SANTA INÊS 1', salesData?.si1, receiptsData?.si1, activesData?.si1, paidActivesData?.si1, entradasData?.si1, canceladosData?.si1, receivablesData?.si1, false);
+                    if (unitMode === 'AMBAS') text += `━━━━━━━━━━━━━━\n\n`;
+                }
+
+                if (unitMode === 'SI2' || unitMode === 'AMBAS') {
+                    text += renderSI('SANTA INÊS 2', salesData?.si2, receiptsData?.si2, activesData?.si2, paidActivesData?.si2, entradasData?.si2, canceladosData?.si2, receivablesData?.si2, true);
+                }
+
+                if (unitMode === 'AMBAS') {
+                    if (flags.hasVisitantes) {
+                        text += `━━━━━━━━━━━━━━\n\n📌 *INDICADORES GERAIS*\n\nVisitantes: ${formatNumber(visitantesData?.visitantes)}\nVisitantes Wellhub: ${formatNumber(visitantesData?.wellhub)}\n\n`;
+                    }
+
+                    text += `━━━━━━━━━━━━━━\n\n📈 *CONSOLIDADO*\n\n`;
+                    if (flags.hasSales) text += `Faturamento: ${formatCurrency((salesData?.si1.total || 0) + (salesData?.si2.total || 0))}\n`;
+                    if (flags.hasReceipts) text += `Recebimento: ${formatCurrency((receiptsData?.si1.total || 0) + (receiptsData?.si2.total || 0))}\n`;
+                    if (flags.hasActives) text += `Ativos: ${formatNumber((activesData?.si1.count || 0) + (activesData?.si2.count || 0))}\n`;
+                    if (flags.hasPaidActives) text += `Ativos Pagos: ${formatNumber((paidActivesData?.si1.count || 0) + (paidActivesData?.si2.count || 0))}\n`;
+                    if (flags.hasEntradas) text += `Entradas: ${formatNumber((entradasData?.si1.count || 0) + (entradasData?.si2.count || 0))}\n`;
+                    if (flags.hasCancelados) text += `Cancelados: ${formatNumber((canceladosData?.si1.count || 0) + (canceladosData?.si2.count || 0))}\n`;
+                    if (flags.hasReceivables) text += `Recebíveis: ${formatCurrency((receivablesData?.si1.total || 0) + (receivablesData?.si2.total || 0))}\n`;
+                }
+
+                return `📊 *RELATÓRIO — ${unitMode === 'AMBAS' ? 'GERAL' : (unitMode === 'SI1' ? 'SANTA INÊS 1' : 'SANTA INÊS 2')}*\n📅 ${dateStr}\n\n${text}`.trim();
+            };
+
+            const reportText = generateReportText(reportUnit);
+
+            const handleCopy = () => {
+                const el = document.createElement('textarea');
+                el.value = reportText;
+                document.body.appendChild(el);
+                el.select();
+                try {
+                    document.execCommand('copy');
+                    setCopySuccess(true);
+                    setTimeout(() => setCopySuccess(false), 2000);
+                } catch (e) {
+                    console.error("Falha ao copiar texto", e);
+                }
+                document.body.removeChild(el);
+            };
+
+            const handleWhatsApp = () => {
+                window.open(`https://wa.me/?text=${encodeURIComponent(reportText)}`, '_blank', 'noopener,noreferrer');
+            };
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-70 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg flex flex-col animate-up border-t-4 border-green-500">
+                        <div className="p-4 border-b flex justify-between items-center rounded-t-xl bg-gray-50">
+                            <h3 className="font-bold text-lg font-display uppercase tracking-wide text-gray-800">Gerar Relatório</h3>
+                            <button onClick={onClose} className="hover:bg-gray-200 p-1 rounded-full transition-colors text-gray-500"><Icons.Close /></button>
+                        </div>
+                        
+                        <div className="p-6 overflow-y-auto max-h-[60vh]">
+                            <p className="text-sm font-bold text-gray-700 mb-3 uppercase">Selecione a Unidade</p>
+                            <div className="flex flex-col sm:flex-row gap-2 mb-6">
+                                {['SANTA INÊS 1', 'SANTA INÊS 2', 'AMBAS'].map(opt => {
+                                    const val = opt === 'SANTA INÊS 1' ? 'SI1' : opt === 'SANTA INÊS 2' ? 'SI2' : 'AMBAS';
+                                    return (
+                                        <button 
+                                            key={val}
+                                            onClick={() => setReportUnit(val)}
+                                            className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg border transition-colors ${reportUnit === val ? 'bg-green-100 border-green-500 text-green-800' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+                                        >
+                                            {opt}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <p className="text-sm font-bold text-gray-700 mb-2 uppercase">Pré-visualização</p>
+                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-xs font-mono whitespace-pre-wrap text-gray-600 overflow-y-auto max-h-[40vh]">
+                                {reportText}
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t bg-gray-50 rounded-b-xl flex flex-col sm:flex-row justify-between gap-3">
+                            <div className="flex items-center">
+                                {copySuccess && <span className="text-xs font-bold text-green-600">✓ Copiado</span>}
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={handleCopy} className="px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 rounded-lg transition-colors shadow-sm">
+                                    Copiar Texto
+                                </button>
+                                <button onClick={handleWhatsApp} className={`flex items-center gap-2 px-4 py-2 text-sm font-bold text-white rounded-lg transition-colors shadow-sm bg-green-600 hover:bg-green-700`}>
+                                    <Icons.WhatsApp /> Abrir no WhatsApp
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const FileCard = ({ title, onUpload, status, mandatory }) => (
             <div className={`relative p-4 rounded-xl border-2 border-dashed transition-all ${status ? "border-green-500 bg-green-50" : "border-gray-300 hover:border-pratique-red hover:bg-white"} group flex flex-col justify-between h-full`}>
                 <input type="file" accept=".xlsx,.xls,.csv" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => { if (e.target.files[0]) onUpload(e.target.files[0]); e.target.value = null; }} />
@@ -501,6 +644,11 @@
                             <span className={`font-bold text-gray-600 text-sm transition-colors group-hover:text-pratique-red`}>{title}</span>
                         </>
                     )}
+                </div>
+                <div className="mt-3 text-center border-t border-gray-200/50 pt-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                        Opcional
+                    </span>
                 </div>
             </div>
         );
@@ -729,171 +877,25 @@
             );
         };
 
-        const WhatsAppReportModal = ({ isOpen, onClose, flags, salesData, receiptsData, activesData, paidActivesData, entradasData, canceladosData, receivablesData, visitantesData }) => {
-            const [reportUnit, setReportUnit] = useState('AMBAS');
-            const [copySuccess, setCopySuccess] = useState(false);
-
-            if (!isOpen) return null;
-
-            const generateReportText = (unitMode) => {
-                let text = '';
-                const now = new Date();
-                const dateStr = now.toLocaleDateString('pt-BR');
-
-                const renderSI = (unitName, sales, receipts, actives, paidActives, entradas, cancelados, receivables, isSI2) => {
-                    let out = `📍 *${unitName}*\n\n`;
-                    
-                    if (flags.hasSales) {
-                        out += `💰 *FATURAMENTO*\n${formatCurrency(sales?.total)}\n• ${formatNumber(sales?.count)} vendas\n• Nutri/Combo: ${formatNumber(sales?.nutriCount)}\n• Plus: ${formatNumber(sales?.plusCount)}\n\n`;
-                    }
-                    if (flags.hasReceipts) {
-                        out += `💵 *RECEBIMENTO*\n${formatCurrency(receipts?.total)}\n\n`;
-                        if (isSI2 && receipts?.personalClassCount !== undefined) {
-                            out += `🏋️ *PERSONAL CLASS*\n${formatNumber(receipts.personalClassCount)}\n\n`;
-                        }
-                    }
-                    if (flags.hasActives) {
-                        out += `👥 *ATIVOS*\n${formatNumber(actives?.count)}\n\n`;
-                    }
-                    if (flags.hasPaidActives) {
-                        out += `✅ *ATIVOS PAGOS*\n${formatNumber(paidActives?.count)}\n\n`;
-                    }
-                    if (flags.hasEntradas) {
-                        out += `📥 *ENTRADAS*\n${formatNumber(entradas?.count)}\n`;
-                        if (entradas?.grupos) {
-                            out += `• Nutri: ${formatNumber(entradas.grupos.NUTRI.count)}\n`;
-                            out += `• Plus: ${formatNumber(entradas.grupos.PLUS.count)}\n`;
-                            out += `• Fit: ${formatNumber(entradas.grupos.FIT.count)}\n`;
-                            out += `• Class: ${formatNumber(entradas.grupos.CLASS.count)}\n`;
-                            out += `• Outros: ${formatNumber(entradas.grupos.OUTROS.count)}\n`;
-                        }
-                        out += '\n';
-                    }
-                    if (flags.hasCancelados) {
-                        out += `🚫 *CANCELADOS*\n${formatNumber(cancelados?.count)}\n\n`;
-                    }
-                    if (flags.hasReceivables) {
-                        out += `💳 *RECEBÍVEIS*\n${formatCurrency(receivables?.total)}\n\n`;
-                    }
-                    return out;
-                };
-
-                if (unitMode === 'SI1' || unitMode === 'AMBAS') {
-                    text += renderSI('SANTA INÊS 1', salesData?.si1, receiptsData?.si1, activesData?.si1, paidActivesData?.si1, entradasData?.si1, canceladosData?.si1, receivablesData?.si1, false);
-                    if (unitMode === 'AMBAS') text += `━━━━━━━━━━━━━━\n\n`;
-                }
-
-                if (unitMode === 'SI2' || unitMode === 'AMBAS') {
-                    text += renderSI('SANTA INÊS 2', salesData?.si2, receiptsData?.si2, activesData?.si2, paidActivesData?.si2, entradasData?.si2, canceladosData?.si2, receivablesData?.si2, true);
-                }
-
-                if (unitMode === 'AMBAS') {
-                    if (flags.hasVisitantes) {
-                        text += `━━━━━━━━━━━━━━\n\n📌 *INDICADORES GERAIS*\n\nVisitantes: ${formatNumber(visitantesData?.visitantes)}\nVisitantes Wellhub: ${formatNumber(visitantesData?.wellhub)}\n\n`;
-                    }
-
-                    text += `━━━━━━━━━━━━━━\n\n📈 *CONSOLIDADO*\n\n`;
-                    if (flags.hasSales) text += `Faturamento: ${formatCurrency((salesData?.si1.total || 0) + (salesData?.si2.total || 0))}\n`;
-                    if (flags.hasReceipts) text += `Recebimento: ${formatCurrency((receiptsData?.si1.total || 0) + (receiptsData?.si2.total || 0))}\n`;
-                    if (flags.hasActives) text += `Ativos: ${formatNumber((activesData?.si1.count || 0) + (activesData?.si2.count || 0))}\n`;
-                    if (flags.hasPaidActives) text += `Ativos Pagos: ${formatNumber((paidActivesData?.si1.count || 0) + (paidActivesData?.si2.count || 0))}\n`;
-                    if (flags.hasEntradas) text += `Entradas: ${formatNumber((entradasData?.si1.count || 0) + (entradasData?.si2.count || 0))}\n`;
-                    if (flags.hasCancelados) text += `Cancelados: ${formatNumber((canceladosData?.si1.count || 0) + (canceladosData?.si2.count || 0))}\n`;
-                    if (flags.hasReceivables) text += `Recebíveis: ${formatCurrency((receivablesData?.si1.total || 0) + (receivablesData?.si2.total || 0))}\n`;
-                }
-
-                return `📊 *RELATÓRIO — ${unitMode === 'AMBAS' ? 'GERAL' : (unitMode === 'SI1' ? 'SANTA INÊS 1' : 'SANTA INÊS 2')}*\n📅 ${dateStr}\n\n${text}`.trim();
-            };
-
-            const reportText = generateReportText(reportUnit);
-
-            const handleCopy = () => {
-                const el = document.createElement('textarea');
-                el.value = reportText;
-                document.body.appendChild(el);
-                el.select();
-                try {
-                    document.execCommand('copy');
-                    setCopySuccess(true);
-                    setTimeout(() => setCopySuccess(false), 2000);
-                } catch (e) {
-                    console.error("Falha ao copiar texto", e);
-                }
-                document.body.removeChild(el);
-            };
-
-            const handleWhatsApp = () => {
-                window.open(`https://wa.me/?text=${encodeURIComponent(reportText)}`, '_blank', 'noopener,noreferrer');
-            };
-
-            return (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-70 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg flex flex-col animate-up border-t-4 border-green-500">
-                        <div className="p-4 border-b flex justify-between items-center rounded-t-xl bg-gray-50">
-                            <h3 className="font-bold text-lg font-display uppercase tracking-wide text-gray-800">Gerar Relatório</h3>
-                            <button onClick={onClose} className="hover:bg-gray-200 p-1 rounded-full transition-colors text-gray-500"><Icons.Close /></button>
-                        </div>
-                        
-                        <div className="p-6 overflow-y-auto max-h-[60vh]">
-                            <p className="text-sm font-bold text-gray-700 mb-3 uppercase">Selecione a Unidade</p>
-                            <div className="flex flex-col sm:flex-row gap-2 mb-6">
-                                {['SANTA INÊS 1', 'SANTA INÊS 2', 'AMBAS'].map(opt => {
-                                    const val = opt === 'SANTA INÊS 1' ? 'SI1' : opt === 'SANTA INÊS 2' ? 'SI2' : 'AMBAS';
-                                    return (
-                                        <button 
-                                            key={val}
-                                            onClick={() => setReportUnit(val)}
-                                            className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg border transition-colors ${reportUnit === val ? 'bg-green-100 border-green-500 text-green-800' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
-                                        >
-                                            {opt}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-
-                            <p className="text-sm font-bold text-gray-700 mb-2 uppercase">Pré-visualização</p>
-                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-xs font-mono whitespace-pre-wrap text-gray-600 overflow-y-auto max-h-[40vh]">
-                                {reportText}
-                            </div>
-                        </div>
-
-                        <div className="p-4 border-t bg-gray-50 rounded-b-xl flex flex-col sm:flex-row justify-between gap-3">
-                            <div className="flex items-center">
-                                {copySuccess && <span className="text-xs font-bold text-green-600">✓ Copiado</span>}
-                            </div>
-                            <div className="flex gap-2">
-                                <button onClick={handleCopy} className="px-4 py-2 text-sm font-bold text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 rounded-lg transition-colors shadow-sm">
-                                    Copiar Texto
-                                </button>
-                                <button onClick={handleWhatsApp} className={`flex items-center gap-2 px-4 py-2 text-sm font-bold text-white rounded-lg transition-colors shadow-sm bg-green-600 hover:bg-green-700`}>
-                                    <Icons.WhatsApp /> Abrir no WhatsApp
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
         const Dashboard = () => {
-            const [etapa, setEtapa] = useState('IMPORTACAO'); 
+            const [etapa, setEtapa] = useState('IMPORTACAO');
 
             const [rawSales, setRawSales] = useState(null);
             const [rawReceipts, setRawReceipts] = useState(null);
+            const [rawReceivables, setRawReceivables] = useState(null);
             const [rawActives, setRawActives] = useState(null);
-            const [rawPaidActives, setRawPaidActives] = useState(null); // NOVO ITEM 4
+            const [rawPaidActives, setRawPaidActives] = useState(null);
             const [rawEntradas, setRawEntradas] = useState(null);
             const [rawCancelados, setRawCancelados] = useState(null);
-            const [rawReceivables, setRawReceivables] = useState(null);
             const [rawVisitantes, setRawVisitantes] = useState(null);
             
             const [salesData, setSalesData] = useState(null);
             const [receiptsData, setReceiptsData] = useState(null);
+            const [receivablesData, setReceivablesData] = useState(null);
             const [activesData, setActivesData] = useState(null);
-            const [paidActivesData, setPaidActivesData] = useState(null); // NOVO ITEM 4
+            const [paidActivesData, setPaidActivesData] = useState(null);
             const [entradasData, setEntradasData] = useState(null);
             const [canceladosData, setCanceladosData] = useState(null);
-            const [receivablesData, setReceivablesData] = useState(null);
             const [visitantesData, setVisitantesData] = useState(null);
             
             const [planOverrides, setPlanOverrides] = useState(() => {
@@ -918,7 +920,9 @@
             const [entModalItemsMap, setEntModalItemsMap] = useState({});
             const [entModalColor, setEntModalColor] = useState('bg-gray-800');
 
-            const [reportModalOpen, setReportModalOpen] = useState(false); // Modal Relatório Whatsapp
+            const [reportModalOpen, setReportModalOpen] = useState(false);
+
+            const [sendingEmail, setSendingEmail] = useState(false);
 
             useEffect(() => { localStorage.setItem('plan_overrides', JSON.stringify(planOverrides)); }, [planOverrides]);
             useEffect(() => { localStorage.setItem('entradas_group_overrides', JSON.stringify(entradasGroupOverrides)); }, [entradasGroupOverrides]);
@@ -929,11 +933,11 @@
             const flags = {
                 hasSales: !!rawSales,
                 hasReceipts: !!rawReceipts,
+                hasReceivables: !!rawReceivables,
                 hasActives: !!rawActives,
-                hasPaidActives: !!rawPaidActives, // NOVO
+                hasPaidActives: !!rawPaidActives,
                 hasEntradas: !!rawEntradas,
                 hasCancelados: !!rawCancelados,
-                hasReceivables: !!rawReceivables,
                 hasVisitantes: !!rawVisitantes
             };
 
@@ -1022,7 +1026,7 @@
             };
 
             const handleVisualizarDados = async () => {
-                if (!isReadyToView) return;
+                if (!isReadyToView || sendingEmail) return;
 
                 const errors = getValidationErrors();
                 if (errors.length > 0) {
@@ -1031,6 +1035,7 @@
                 }
 
                 setEtapa('CONFERENCIA');
+                setSendingEmail(true);
                 
                 const payload = montarPayloadFechamento();
 
@@ -1049,15 +1054,18 @@
                     console.log('[RELATORIO] Resumo enviado com sucesso ao gestor.');
                 } catch (error) {
                     console.error("[RELATORIO] Erro técnico ao enviar fechamento:", error);
+                } finally {
+                    setSendingEmail(false);
                 }
             };
 
             useEffect(() => {
                 if (rawSales) calculateSales(rawSales); if (rawReceipts) calculateReceipts(rawReceipts);
-                if (rawActives) calculateActives(rawActives); if (rawPaidActives) calculatePaidActives(rawPaidActives);
+                if (rawReceivables) calculateReceivables(rawReceivables); if (rawActives) calculateActives(rawActives);
+                if (rawPaidActives) calculatePaidActives(rawPaidActives);
                 if (rawEntradas) calculateEntradas(rawEntradas); if (rawCancelados) calculateCancelados(rawCancelados);
-                if (rawReceivables) calculateReceivables(rawReceivables); if (rawVisitantes) calculateVisitantes(rawVisitantes);
-            }, [planOverrides, entradasGroupOverrides, rawSales, rawReceipts, rawActives, rawPaidActives, rawEntradas, rawCancelados, rawReceivables, rawVisitantes]);
+                if (rawVisitantes) calculateVisitantes(rawVisitantes);
+            }, [planOverrides, entradasGroupOverrides, rawSales, rawReceipts, rawReceivables, rawActives, rawPaidActives, rawEntradas, rawCancelados, rawVisitantes]);
 
             const updatePlanList = (newPlans) => { setAllPlans(prev => { const next = new Set(prev); newPlans.forEach(p => next.add(p)); return next; }); };
             const updateEntradasPlanList = (newPlans) => { setEntradasPlans(prev => { const next = new Set(prev); newPlans.forEach(p => next.add(p)); return next; }); };
@@ -1112,7 +1120,6 @@
                 setActivesData(stats);
             };
 
-            // NOVA FONTE: ATIVOS PAGOS (Usa exatamente a mesma estrutura limpa do Actives)
             const calculatePaidActives = (data) => {
                 let stats = { si1: { count: 0 }, si2: { count: 0 } };
                 data.rows.forEach(row => { const plan = row[data.planIdx]; if(!plan) return; const unit = getUnit(plan, planOverrides); if (unit === 'IGNORE') return; if (unit === 'SI2') stats.si2.count++; else stats.si1.count++; });
@@ -1164,6 +1171,15 @@
                 }; reader.readAsBinaryString(file);
             };
 
+            const handleReceivablesUpload = (file) => {
+                const reader = new FileReader(); reader.onload = (e) => {
+                    const wb = XLSX.read(e.target.result, { type: 'binary' }); const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+                    const hIdx = findHeader(json, ['PLANO', 'VALOR', 'RECEBER', 'COMPENSADO']); let planIdx = 20; let valIdx = 7;   
+                    if (json[hIdx]) { const smart = findSmartColumns(json[hIdx], json[hIdx+1]); if(smart.planIdx !== 12) planIdx = smart.planIdx; if(smart.valIdx !== 19) valIdx = smart.valIdx; }
+                    const rows = json.slice(hIdx + 1).filter(r => r && r[planIdx]); updatePlanList(rows.map(r => r[planIdx]).filter(Boolean)); setRawReceivables({ rows, planIdx, valIdx });
+                }; reader.readAsBinaryString(file);
+            };
+
             const handleActivesUpload = (file) => {
                 const reader = new FileReader(); reader.onload = (e) => {
                     const wb = XLSX.read(e.target.result, { type: 'binary' }); const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
@@ -1172,7 +1188,6 @@
                 }; reader.readAsBinaryString(file);
             };
 
-            // NOVO: UPLOAD DE ATIVOS PAGOS (Reutiliza a inteligência de processamento de Matrícula/Plano)
             const handlePaidActivesUpload = (file) => {
                 const reader = new FileReader(); reader.onload = (e) => {
                     const wb = XLSX.read(e.target.result, { type: 'binary' }); const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
@@ -1201,15 +1216,6 @@
                 }; reader.readAsBinaryString(file);
             };
 
-            const handleReceivablesUpload = (file) => {
-                const reader = new FileReader(); reader.onload = (e) => {
-                    const wb = XLSX.read(e.target.result, { type: 'binary' }); const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
-                    const hIdx = findHeader(json, ['PLANO', 'VALOR', 'RECEBER', 'COMPENSADO']); let planIdx = 20; let valIdx = 7;   
-                    if (json[hIdx]) { const smart = findSmartColumns(json[hIdx], json[hIdx+1]); if(smart.planIdx !== 12) planIdx = smart.planIdx; if(smart.valIdx !== 19) valIdx = smart.valIdx; }
-                    const rows = json.slice(hIdx + 1).filter(r => r && r[planIdx]); updatePlanList(rows.map(r => r[planIdx]).filter(Boolean)); setRawReceivables({ rows, planIdx, valIdx });
-                }; reader.readAsBinaryString(file);
-            };
-
             const handleVisitantesUpload = (file) => {
                 const reader = new FileReader(); reader.onload = (e) => {
                     const wb = XLSX.read(e.target.result, { type: 'binary' }); const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
@@ -1220,8 +1226,8 @@
             const reset = () => {
                 if(confirm("Deseja realmente limpar a visualização? Todos os arquivos e dados atuais serão removidos.")) {
                     setEtapa('IMPORTACAO');
-                    setRawSales(null); setRawReceipts(null); setRawActives(null); setRawPaidActives(null); setRawEntradas(null); setRawCancelados(null); setRawReceivables(null); setRawVisitantes(null);
-                    setSalesData(null); setReceiptsData(null); setActivesData(null); setPaidActivesData(null); setEntradasData(null); setCanceladosData(null); setReceivablesData(null); setVisitantesData(null);
+                    setRawSales(null); setRawReceipts(null); setRawReceivables(null); setRawActives(null); setRawPaidActives(null); setRawEntradas(null); setRawCancelados(null); setRawVisitantes(null);
+                    setSalesData(null); setReceiptsData(null); setReceivablesData(null); setActivesData(null); setPaidActivesData(null); setEntradasData(null); setCanceladosData(null); setVisitantesData(null);
                     setAllPlans(new Set()); setEntradasPlans(new Set());
                 }
             };
@@ -1248,7 +1254,6 @@
                         </div>
                     </header>
 
-                    {/* --- ETAPA 1: IMPORTAÇÃO --- */}
                     {etapa === 'IMPORTACAO' && (
                         <div className="animate-fade-in flex flex-col gap-8">
                             <div className="text-center max-w-2xl mx-auto mb-4">
@@ -1262,7 +1267,6 @@
                                 </div>
 
                                 <section className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                                    {/* NOVA ORDEM 1 A 8 */}
                                     <FileCard title="1. Faturamento" onUpload={handleSalesUpload} status={flags.hasSales} />
                                     <FileCard title="2. Recebimento" onUpload={handleReceiptsUpload} status={flags.hasReceipts} />
                                     <FileCard title="3. Ativos" onUpload={handleActivesUpload} status={flags.hasActives} />
@@ -1281,19 +1285,18 @@
                                 
                                 <button 
                                     onClick={handleVisualizarDados}
-                                    disabled={!isReadyToView}
+                                    disabled={!isReadyToView || sendingEmail}
                                     className={`px-10 py-4 rounded-xl font-bold text-lg uppercase tracking-wide transition-all shadow-lg flex items-center gap-3
                                         ${isReadyToView ? 'bg-pratique-red text-white hover:bg-red-700 hover:shadow-xl hover:-translate-y-1' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
                                 >
-                                    VISUALIZAR DADOS <span className="text-2xl leading-none">→</span>
+                                    {sendingEmail ? <><span className="loader"></span> PROCESSANDO...</> : <>VISUALIZAR DADOS <span className="text-2xl leading-none">→</span></>}
                                 </button>
 
-                                <p className="text-xs text-gray-400 mt-1">Ao visualizar, um resumo deste fechamento é encaminhado ao gestor.</p>
+                                <p className="text-xs text-gray-400 mt-1">Ao visualizar os dados, um resumo deste fechamento é encaminhado ao gestor.</p>
                             </div>
                         </div>
                     )}
 
-                    {/* --- ETAPA 2: CONFERÊNCIA --- */}
                     {etapa === 'CONFERENCIA' && (
                         <div className="animate-fade-in flex flex-col gap-8">
                             
@@ -1304,12 +1307,12 @@
                                         <span className="text-gray-400">Ao visualizar, um resumo deste fechamento é encaminhado ao gestor.</span>
                                     </div>
                                 </div>
-                                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                                    <button onClick={() => setReportModalOpen(true)} className="flex items-center justify-center gap-2 text-sm bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg transition-colors font-bold border border-green-500 shadow-sm">
+                                <div className="flex gap-2">
+                                    <button onClick={() => setReportModalOpen(true)} className="flex items-center gap-2 text-sm bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg transition-colors font-bold border border-green-500 shadow-sm">
                                         <Icons.WhatsApp /> Relatório WhatsApp
                                     </button>
-                                    <button onClick={() => setEtapa('IMPORTACAO')} className="flex items-center justify-center gap-2 text-sm bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors font-medium border border-gray-700">
-                                        <Icons.ArrowLeft /> Voltar para Importação
+                                    <button onClick={() => setEtapa('IMPORTACAO')} className="flex items-center gap-2 text-sm bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors font-medium border border-gray-700">
+                                        <Icons.ArrowLeft /> Voltar
                                     </button>
                                 </div>
                             </div>
@@ -1326,9 +1329,9 @@
                             )}
 
                             <main className="flex flex-col md:flex-row gap-8 flex-grow">
-                                <UnitColumn unit="SANTA INÊS 1" sales={salesData?.si1} receipts={receiptsData?.si1} actives={activesData?.si1} paidActives={paidActivesData?.si1} entradas={entradasData?.si1} cancelados={canceladosData?.si1} receivables={receivablesData?.si1} isSI2={false} onOpenModal={openModal} onOpenEntradasModal={openEntradasModal} flags={flags} />
+                                <UnitColumn unit="SANTA INÊS 1" sales={salesData?.si1} receipts={receiptsData?.si1} receivables={receivablesData?.si1} actives={activesData?.si1} paidActives={paidActivesData?.si1} entradas={entradasData?.si1} cancelados={canceladosData?.si1} isSI2={false} onOpenModal={openModal} onOpenEntradasModal={openEntradasModal} flags={flags} />
                                 <div className="hidden md:block w-px bg-gray-300 self-stretch"></div>
-                                <UnitColumn unit="SANTA INÊS 2" sales={salesData?.si2} receipts={receiptsData?.si2} actives={activesData?.si2} paidActives={paidActivesData?.si2} entradas={entradasData?.si2} cancelados={canceladosData?.si2} receivables={receivablesData?.si2} isSI2={true} onOpenModal={openModal} onOpenEntradasModal={openEntradasModal} flags={flags} />
+                                <UnitColumn unit="SANTA INÊS 2" sales={salesData?.si2} receipts={receiptsData?.si2} receivables={receivablesData?.si2} actives={activesData?.si2} paidActives={paidActivesData?.si2} entradas={entradasData?.si2} cancelados={canceladosData?.si2} isSI2={true} onOpenModal={openModal} onOpenEntradasModal={openEntradasModal} flags={flags} />
                             </main>
 
                             <div className="mt-4">
