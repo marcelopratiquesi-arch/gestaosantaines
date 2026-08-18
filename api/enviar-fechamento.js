@@ -27,210 +27,143 @@ export default async function handler(req, res) {
     const payload = req.body || {};
     console.log('[FECHAMENTO] Solicitação recebida.');
 
-    // --- FUNÇÕES DE FORMATAÇÃO SEGURA ---
-    const isInvalid = (val) => val === null || val === undefined || Number.isNaN(val);
+    // --- HELPERS DE FORMATAÇÃO E HTML (Limpos e Seguros) ---
+    const formatMoney = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+    const formatNumber = (val) => new Intl.NumberFormat('pt-BR').format(val || 0);
 
-    const formatMoney = (val) => {
-      if (isInvalid(val)) return null;
-      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
-    };
-
-    const formatInt = (val) => {
-      if (isInvalid(val)) return null;
-      return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(val);
-    };
-
-    // Renderiza uma linha de tabela apenas se o valor existir
     const renderRow = (label, value, isCurrency = false) => {
-      if (isInvalid(value)) return '';
-      const formattedValue = isCurrency ? formatMoney(value) : formatInt(value);
-      if (!formattedValue) return ''; // Dupla verificação de segurança
-      
-      return `
+        if (value === null || value === undefined || Number.isNaN(value)) return '';
+        const displayValue = isCurrency ? formatMoney(value) : formatNumber(value);
+        return `
         <tr>
-          <td style="padding: 8px 0; border-bottom: 1px solid #F3F4F6; color: #4B5563; font-size: 14px;">${label}</td>
-          <td style="padding: 8px 0; border-bottom: 1px solid #F3F4F6; text-align: right; color: #111827; font-weight: bold; font-size: 14px;">${formattedValue}</td>
-        </tr>
-      `;
+            <td style="padding: 8px 0; border-bottom: 1px dashed #F3F4F6; font-size: 14px; color: #4B5563;">${label}</td>
+            <td style="padding: 8px 0; border-bottom: 1px dashed #F3F4F6; font-size: 14px; color: #111827; font-weight: bold; text-align: right;">${displayValue}</td>
+        </tr>`;
     };
 
-    // Renderiza status dos arquivos
-    const renderFileStatus = (label, isLoaded) => {
-      if (isLoaded) {
-        return `<div style="color: #10B981; font-weight: bold; font-size: 14px; margin-bottom: 4px;">✓ ${label}</div>`;
-      }
-      return `<div style="color: #9CA3AF; font-size: 14px; margin-bottom: 4px;">— ${label} <span style="font-size: 11px; font-weight: normal;">(Não carregado)</span></div>`;
-    };
-
-    // Renderiza a composição das entradas se existir
     const renderGrupos = (grupos) => {
-      if (!grupos) return '';
-      return `
-        <div style="margin-top: 16px; background: #F9FAFB; border-radius: 8px; padding: 16px;">
-          <h4 style="margin: 0 0 12px 0; font-size: 12px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px;">Composição das Entradas</h4>
-          <table width="100%" cellpadding="0" cellspacing="0" border="0">
-            ${renderRow('Nutri', grupos.nutri)}
-            ${renderRow('Plus', grupos.plus)}
-            ${renderRow('Fit', grupos.fit)}
-            ${renderRow('Class', grupos.class)}
-            ${renderRow('Outros Planos', grupos.outros)}
-          </table>
-        </div>
-      `;
+        if (!grupos) return '';
+        return `
+        <div style="background-color: #F9FAFB; padding: 15px; border-radius: 6px; margin-top: 15px; border: 1px solid #E5E7EB;">
+            <div style="font-size: 12px; font-weight: bold; color: #6B7280; text-transform: uppercase; margin-bottom: 10px;">Composição das Entradas</div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; color: #374151;"><span>🥗 Nutri</span><strong>${formatNumber(grupos.nutri)}</strong></div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; color: #374151;"><span>⭐ Plus</span><strong>${formatNumber(grupos.plus)}</strong></div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; color: #374151;"><span>🏃 Fit</span><strong>${formatNumber(grupos.fit)}</strong></div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; color: #374151;"><span>🏋️ Class</span><strong>${formatNumber(grupos.class)}</strong></div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; color: #374151;"><span>🧩 Outros Planos</span><strong>${formatNumber(grupos.outros)}</strong></div>
+        </div>`;
     };
 
-    // Dados seguros de arquivos
-    const arquivos = payload.arquivos || {};
+    const h = payload.arquivos || {};
 
-    // --- MONTAGEM DO HTML DO E-MAIL ---
     const html = `
       <!DOCTYPE html>
       <html lang="pt-BR">
         <head>
           <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
-        <body style="margin: 0; padding: 0; background-color: #F3F4F6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-          
-          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F3F4F6; padding: 20px 10px;">
-            <tr>
-              <td align="center">
-                
-                <!-- CONTAINER PRINCIPAL -->
-                <table width="100%" max-width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #FFFFFF; border-radius: 12px; overflow: hidden; max-width: 600px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                  
-                  <!-- CABEÇALHO -->
-                  <tr>
-                    <td style="background-color: #111827; border-top: 4px solid #ED1C24; padding: 32px 24px; text-align: center;">
-                      <h2 style="margin: 0; color: #9CA3AF; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Painel Gestão Santa Inês</h2>
-                      <h1 style="margin: 8px 0; color: #FFFFFF; font-size: 24px; font-weight: bold;">Relatório de Fechamento</h1>
-                      <p style="margin: 0; color: #F3F4F6; font-size: 14px;">${escapeHtml(payload.dataStr || '--/--/----')} • ${escapeHtml(payload.horaStr || '--:--')}</p>
-                    </td>
-                  </tr>
+        <body style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F3F4F6; padding: 20px; color: #111827;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            
+            <!-- CABEÇALHO -->
+            <div style="background-color: #111827; color: #FFFFFF; padding: 32px 24px; text-align: center; border-top: 4px solid #ED1C24;">
+              <h2 style="margin: 0; color: #9CA3AF; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Painel Gestão Santa Inês</h2>
+              <h1 style="margin: 8px 0; color: #FFFFFF; font-size: 24px; font-weight: bold;">Relatório de Fechamento</h1>
+              <p style="margin: 0; color: #F3F4F6; font-size: 14px;">${payload.dataStr || ''} • ${payload.horaStr || ''}</p>
+            </div>
 
-                  <!-- ARQUIVOS PROCESSADOS -->
-                  <tr>
-                    <td style="padding: 24px; border-bottom: 1px solid #E5E7EB; background: #F9FAFB;">
-                      <h3 style="margin: 0 0 16px 0; font-size: 13px; color: #4B5563; text-transform: uppercase; letter-spacing: 1px;">Arquivos Processados</h3>
-                      ${renderFileStatus('Faturamento', arquivos.hasSales)}
-                      ${renderFileStatus('Recebimento', arquivos.hasReceipts)}
-                      ${renderFileStatus('Recebíveis', arquivos.hasReceivables)}
-                      ${renderFileStatus('Ativos', arquivos.hasActives)}
-                      ${renderFileStatus('Entradas', arquivos.hasEntradas)}
-                      ${renderFileStatus('Cancelados', arquivos.hasCancelados)}
-                      ${renderFileStatus('Visitantes', arquivos.hasVisitantes)}
-                    </td>
-                  </tr>
+            <!-- ARQUIVOS PROCESSADOS -->
+            <div style="padding: 24px; border-bottom: 1px solid #E5E7EB; background: #F9FAFB;">
+              <h3 style="margin: 0 0 16px 0; font-size: 13px; color: #4B5563; text-transform: uppercase; letter-spacing: 1px;">Arquivos Processados</h3>
+              <div style="font-size: 14px; line-height: 1.6; color: #374151;">
+                <div>${h.hasSales ? '<span style="color:#10B981; font-weight:bold;">✓</span> Faturamento' : '<span style="color:#9CA3AF;">— Faturamento</span>'}</div>
+                <div>${h.hasReceipts ? '<span style="color:#10B981; font-weight:bold;">✓</span> Recebimento' : '<span style="color:#9CA3AF;">— Recebimento</span>'}</div>
+                <div>${h.hasActives ? '<span style="color:#10B981; font-weight:bold;">✓</span> Ativos' : '<span style="color:#9CA3AF;">— Ativos</span>'}</div>
+                <div>${h.hasPaidActives ? '<span style="color:#10B981; font-weight:bold;">✓</span> Ativos Pagos' : '<span style="color:#9CA3AF;">— Ativos Pagos</span>'}</div>
+                <div>${h.hasEntradas ? '<span style="color:#10B981; font-weight:bold;">✓</span> Entradas' : '<span style="color:#9CA3AF;">— Entradas</span>'}</div>
+                <div>${h.hasCancelados ? '<span style="color:#10B981; font-weight:bold;">✓</span> Cancelados' : '<span style="color:#9CA3AF;">— Cancelados</span>'}</div>
+                <div>${h.hasReceivables ? '<span style="color:#10B981; font-weight:bold;">✓</span> Recebíveis' : '<span style="color:#9CA3AF;">— Recebíveis</span>'}</div>
+                <div>${h.hasVisitantes ? '<span style="color:#10B981; font-weight:bold;">✓</span> Visitantes' : '<span style="color:#9CA3AF;">— Visitantes</span>'}</div>
+              </div>
+            </div>
 
-                  <!-- SANTA INÊS 1 -->
-                  <tr>
-                    <td style="padding: 32px 24px; border-bottom: 1px solid #E5E7EB;">
-                      <h3 style="margin: 0 0 20px 0; font-size: 18px; color: #ED1C24; font-weight: bold;">SANTA INÊS 1</h3>
-                      <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                        ${renderRow('Faturamento', payload.si1?.faturamento, true)}
-                        ${renderRow('Recebimento', payload.si1?.recebimento, true)}
-                        ${renderRow('Recebíveis', payload.si1?.recebiveis, true)}
-                        ${renderRow('Ativos', payload.si1?.ativos)}
-                        ${renderRow('Entradas', payload.si1?.entradas)}
-                        ${renderRow('Cancelados', payload.si1?.cancelados)}
-                      </table>
-                      ${renderGrupos(payload.si1?.gruposEntradas)}
-                    </td>
-                  </tr>
+            <!-- SANTA INÊS 1 -->
+            <div style="padding: 32px 24px; border-bottom: 1px solid #E5E7EB;">
+              <h3 style="margin: 0 0 20px 0; font-size: 18px; color: #ED1C24; font-weight: bold; text-transform: uppercase;">Santa Inês 1</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                ${renderRow('Faturamento', payload.si1?.faturamento, true)}
+                ${renderRow('Recebimento', payload.si1?.recebimento, true)}
+                ${renderRow('Ativos', payload.si1?.ativos)}
+                ${renderRow('Ativos Pagos', payload.si1?.ativosPagos)}
+                ${renderRow('Entradas', payload.si1?.entradas)}
+                ${renderRow('Cancelados', payload.si1?.cancelados)}
+                ${renderRow('Recebíveis', payload.si1?.recebiveis, true)}
+              </table>
+              ${h.hasEntradas ? renderGrupos(payload.si1?.gruposEntradas) : ''}
+            </div>
 
-                  <!-- SANTA INÊS 2 -->
-                  <tr>
-                    <td style="padding: 32px 24px; border-bottom: 1px solid #E5E7EB;">
-                      <h3 style="margin: 0 0 20px 0; font-size: 18px; color: #1E3A8A; font-weight: bold;">SANTA INÊS 2</h3>
-                      <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                        ${renderRow('Faturamento', payload.si2?.faturamento, true)}
-                        ${renderRow('Recebimento', payload.si2?.recebimento, true)}
-                        ${renderRow('Recebíveis', payload.si2?.recebiveis, true)}
-                        ${renderRow('Ativos', payload.si2?.ativos)}
-                        ${renderRow('Entradas', payload.si2?.entradas)}
-                        ${renderRow('Cancelados', payload.si2?.cancelados)}
-                        ${renderRow('Personal Class', payload.si2?.personalClass)}
-                      </table>
-                      ${renderGrupos(payload.si2?.gruposEntradas)}
-                    </td>
-                  </tr>
+            <!-- SANTA INÊS 2 -->
+            <div style="padding: 32px 24px; border-bottom: 1px solid #E5E7EB;">
+              <h3 style="margin: 0 0 20px 0; font-size: 18px; color: #1E3A8A; font-weight: bold; text-transform: uppercase;">Santa Inês 2</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                ${renderRow('Faturamento', payload.si2?.faturamento, true)}
+                ${renderRow('Recebimento', payload.si2?.recebimento, true)}
+                ${renderRow('Ativos', payload.si2?.ativos)}
+                ${renderRow('Ativos Pagos', payload.si2?.ativosPagos)}
+                ${renderRow('Entradas', payload.si2?.entradas)}
+                ${renderRow('Cancelados', payload.si2?.cancelados)}
+                ${renderRow('Recebíveis', payload.si2?.recebiveis, true)}
+                ${renderRow('Personal Class', payload.si2?.personalClass)}
+              </table>
+              ${h.hasEntradas ? renderGrupos(payload.si2?.gruposEntradas) : ''}
+            </div>
 
-                  <!-- INDICADORES GERAIS -->
-                  ${payload.globais && (!isInvalid(payload.globais.visitantes) || !isInvalid(payload.globais.visitantesWellhub)) ? `
-                  <tr>
-                    <td style="padding: 32px 24px; border-bottom: 1px solid #E5E7EB;">
-                      <h3 style="margin: 0 0 20px 0; font-size: 16px; color: #059669; font-weight: bold;">INDICADORES GLOBAIS</h3>
-                      <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                        ${renderRow('Visitantes', payload.globais.visitantes)}
-                        ${renderRow('Visitantes Wellhub', payload.globais.visitantesWellhub)}
-                      </table>
-                    </td>
-                  </tr>
-                  ` : ''}
-
-                  <!-- CONSOLIDADO GERAL -->
-                  ${payload.consolidado ? `
-                  <tr>
-                    <td style="padding: 32px 24px; background-color: #1F2937;">
-                      <h3 style="margin: 0 0 20px 0; font-size: 16px; color: #FFFFFF; text-transform: uppercase; letter-spacing: 1px;">Consolidado Geral</h3>
-                      <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                        ${renderRow('<span style="color:#D1D5DB">Faturamento Total</span>', payload.consolidado.faturamento, true).replace('color: #111827', 'color: #FFFFFF')}
-                        ${renderRow('<span style="color:#D1D5DB">Recebimento Total</span>', payload.consolidado.recebimento, true).replace('color: #111827', 'color: #4ADE80')}
-                        ${renderRow('<span style="color:#D1D5DB">Recebíveis Total</span>', payload.consolidado.recebiveis, true).replace('color: #111827', 'color: #C084FC')}
-                        ${renderRow('<span style="color:#D1D5DB">Ativos Total</span>', payload.consolidado.ativos).replace('color: #111827', 'color: #60A5FA')}
-                        ${renderRow('<span style="color:#D1D5DB">Entradas Total</span>', payload.consolidado.entradas).replace('color: #111827', 'color: #FBBF24')}
-                        ${renderRow('<span style="color:#D1D5DB">Cancelados Total</span>', payload.consolidado.cancelados).replace('color: #111827', 'color: #F472B6')}
-                      </table>
-                    </td>
-                  </tr>
-                  ` : ''}
-
-                  <!-- CONFIGURAÇÃO -->
-                  ${payload.configuracao ? `
-                  <tr>
-                    <td style="padding: 24px; background-color: #F9FAFB; border-top: 1px solid #E5E7EB;">
-                      <h3 style="margin: 0 0 16px 0; font-size: 13px; color: #4B5563; text-transform: uppercase; letter-spacing: 1px;">Classificação das Nomenclaturas</h3>
-                      <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                        ${renderRow('Santa Inês 1', payload.configuracao.si1)}
-                        ${renderRow('Santa Inês 2', payload.configuracao.si2)}
-                        ${renderRow('Não Classificados', payload.configuracao.ignorados)}
-                      </table>
-                      ${payload.configuracao.ignorados >= 1 ? `
-                        <p style="margin: 12px 0 0 0; font-size: 12px; color: #D97706; background: #FEF3C7; padding: 12px; border-radius: 6px;">
-                          <strong>Aviso:</strong> ${payload.configuracao.ignorados} nomenclatura(s) permanece(m) como "Não Classificado" e não entrou/entraram nas métricas acima.
-                        </p>
-                      ` : ''}
-                    </td>
-                  </tr>
-                  ` : ''}
-
-                  <!-- RODAPÉ -->
-                  <tr>
-                    <td style="padding: 24px; text-align: center; background-color: #E5E7EB;">
-                      <p style="margin: 0; font-size: 12px; color: #6B7280;">
-                        Relatório gerado automaticamente pelo<br><strong>Painel Gestão Santa Inês</strong>.
-                      </p>
-                    </td>
-                  </tr>
-
+            <!-- GLOBAIS E CONFIGURACAO -->
+            <div style="padding: 32px 24px; border-bottom: 1px solid #E5E7EB;">
+                ${h.hasVisitantes ? `
+                <h3 style="margin: 0 0 20px 0; font-size: 16px; color: #059669; font-weight: bold; text-transform: uppercase;">Indicadores Globais</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+                    ${renderRow('Visitantes Avulsos', payload.globais?.visitantes)}
+                    ${renderRow('Visitantes Wellhub', payload.globais?.visitantesWellhub)}
                 </table>
-              </td>
-            </tr>
-          </table>
+                ` : ''}
+
+                <h3 style="margin: 0 0 16px 0; font-size: 13px; color: #6B7280; text-transform: uppercase; letter-spacing: 1px;">Classificação das Nomenclaturas</h3>
+                <div style="font-size: 13px; color: #4B5563; line-height: 1.8;">
+                    <div>Santa Inês 1 ........ <strong>${payload.configuracao?.si1 || 0}</strong></div>
+                    <div>Santa Inês 2 ........ <strong>${payload.configuracao?.si2 || 0}</strong></div>
+                    <div>Não classificados ... <strong>${payload.configuracao?.ignorados || 0}</strong></div>
+                </div>
+                ${payload.configuracao?.ignorados >= 1 ? `<p style="margin: 12px 0 0 0; font-size: 12px; color: #D97706; background: #FEF3C7; padding: 12px; border-radius: 6px;">⚠️ ${payload.configuracao.ignorados} nomenclatura(s) permanece(m) Não Classificada(s).</p>` : ''}
+            </div>
+
+            <!-- CONSOLIDADO GERAL -->
+            <div style="padding: 32px 24px; background-color: #111827;">
+              <h3 style="margin: 0 0 20px 0; font-size: 16px; color: #FFFFFF; text-transform: uppercase; letter-spacing: 1px;">Consolidado Geral</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                ${renderRow('<span style="color:#D1D5DB">Faturamento Total</span>', payload.consolidado?.faturamento, true).replace('color: #111827', 'color: #FFFFFF')}
+                ${renderRow('<span style="color:#D1D5DB">Recebimento Total</span>', payload.consolidado?.recebimento, true).replace('color: #111827', 'color: #4ADE80')}
+                ${renderRow('<span style="color:#D1D5DB">Ativos Total</span>', payload.consolidado?.ativos).replace('color: #111827', 'color: #60A5FA')}
+                ${renderRow('<span style="color:#D1D5DB">Ativos Pagos Total</span>', payload.consolidado?.ativosPagos).replace('color: #111827', 'color: #60A5FA')}
+                ${renderRow('<span style="color:#D1D5DB">Entradas Total</span>', payload.consolidado?.entradas).replace('color: #111827', 'color: #FBBF24')}
+                ${renderRow('<span style="color:#D1D5DB">Cancelados Total</span>', payload.consolidado?.cancelados).replace('color: #111827', 'color: #F472B6')}
+                ${renderRow('<span style="color:#D1D5DB; border-bottom: none;">Recebíveis Total</span>', payload.consolidado?.recebiveis, true).replace('color: #111827', 'color: #C084FC').replace('border-bottom: 1px dashed #F3F4F6;', 'border-bottom: none;')}
+              </table>
+            </div>
+
+          </div>
         </body>
       </html>
     `;
 
     const resendResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
-
       body: JSON.stringify({
-        from: emailFrom,
+        from: `Pratique Painel <${emailFrom}>`,
         to: [emailTo],
         subject: `Fechamento Santa Inês • ${payload.dataStr || ''} • ${payload.horaStr || ''}`,
         html: html
@@ -247,22 +180,14 @@ export default async function handler(req, res) {
     }
 
     if (!resendResponse.ok) {
-      console.error(
-        '[FECHAMENTO] Resend recusou o envio:',
-        resendResponse.status,
-        responseText
-      );
-
+      console.error('[FECHAMENTO] Resend recusou o envio:', resendResponse.status, responseText);
       return res.status(502).json({
         success: false,
         error: 'O serviço de e-mail recusou o envio.'
       });
     }
 
-    console.log(
-      '[FECHAMENTO] E-mail aceito pelo provedor.',
-      resendData?.id || ''
-    );
+    console.log('[FECHAMENTO] E-mail aceito pelo provedor.', resendData?.id || '');
 
     return res.status(200).json({
       success: true,
@@ -271,20 +196,9 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('[FECHAMENTO] Erro interno:', error);
-
     return res.status(500).json({
       success: false,
       error: 'Erro interno ao enviar o fechamento.'
     });
   }
-}
-
-// Impede que conteúdo recebido seja interpretado como HTML do e-mail (Proteção contra XSS simples)
-function escapeHtml(value = '') {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
 }
