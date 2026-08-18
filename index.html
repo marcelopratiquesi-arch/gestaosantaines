@@ -26,15 +26,10 @@
 
     <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-    
     <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
-    
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
 
     <script>
@@ -65,21 +60,29 @@
         .animate-up { animation: slideUp 0.5s ease-out forwards; opacity: 0; transform: translateY(20px); }
         @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
         
-        /* Modal Animation */
         .modal-enter { opacity: 0; transform: scale(0.95); }
         .modal-enter-active { opacity: 1; transform: scale(1); transition: opacity 300ms, transform 300ms; }
         
-        /* Markdown Styles */
         .prose h1, .prose h2, .prose h3 { font-family: 'Oswald', sans-serif; color: #111827; margin-top: 1em; margin-bottom: 0.5em; }
         .prose h3 { font-size: 1.25rem; }
         .prose ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1em; }
         .prose p { margin-bottom: 1em; line-height: 1.6; color: #374151; }
         .prose strong { color: #ED1C24; }
         
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+
+        .loader {
+            border: 2px solid rgba(255,255,255,0.3);
+            border-left-color: #fff;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -88,14 +91,13 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo, useCallback } = React;
 
-        // --- GEMINI API CONFIG (EMBUTIDA) ---
         const defaultApiKey = "AIzaSyDnHkC_oGeztNjZ7wNq9vOAeot9cml3SJ4"; 
 
-        // --- ICONS ---
         const Icons = {
             Upload: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>,
             Money: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
             Users: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>,
+            UserMinus: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zm11-2h-4m4 0z" /></svg>,
             CreditCard: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>,
             Leaf: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
             Check: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>,
@@ -107,10 +109,11 @@
             Settings: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
             Swap: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>,
             Sparkles: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>,
-            Robot: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+            Robot: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
+            Send: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>,
+            Alert: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>,
+            ArrowLeft: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
         };
-
-        // --- CORE LOGIC ---
 
         const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
         const formatNumber = (val) => new Intl.NumberFormat('pt-BR').format(val || 0);
@@ -126,37 +129,44 @@
 
         const getUnit = (planName, overrides = {}) => {
             if (!planName || typeof planName !== 'string') return 'SI1';
-            
-            if (overrides[planName]) {
-                return overrides[planName];
-            }
+            if (overrides[planName]) return overrides[planName];
 
-            const upper = planName.toUpperCase();
-            const keywordsSI2 = [
-                "S2", "S02", "SI2", "SI 2", "SI02", "SI 02", "S I -2", "S I - 2", "S I TRACINHO 2",
-                "S12", "SI-2", "SI - 2"
-            ];
-            
-            return keywordsSI2.some(k => upper.includes(k)) ? 'SI2' : 'SI1';
+            const upper = String(planName).trim().replace(/\s+/g, ' ').toUpperCase();
+
+            if (upper.includes("COMBO 15 DIAS - PLANO FERIAS") || upper.includes("COMBO 7 DIAS - PLANO FERIAS")) return 'IGNORE';
+            if (upper.startsWith('SANTA INES 2 | CLASS') || upper.startsWith('SANTA INÊS 2 | CLASS')) return 'SI2';
+
+            const keywordsSI2 = ["S2", "S02", "SI2", "SI 2", "SI02", "SI 02", "S I -2", "S I - 2", "S I TRACINHO 2", "S12", "SI-2", "SI - 2"];
+            if (keywordsSI2.some(k => upper.includes(k))) return 'SI2';
+
+            return 'SI1';
+        };
+
+        const classificarGrupoEntrada = (planName, overrides = {}) => {
+            if (overrides[planName]) return overrides[planName];
+            const upper = String(planName || '').trim().replace(/\s+/g, ' ').toUpperCase();
+
+            if (upper.includes('NUTRI')) return 'NUTRI';
+            if (upper.startsWith('SANTA INES 2 | CLASS') || upper.startsWith('SANTA INÊS 2 | CLASS')) return 'CLASS';
+            if (upper.includes('PLUS')) return 'PLUS';
+            if (upper.includes('FIT')) return 'FIT';
+
+            return 'OUTROS';
         };
 
         const isNutriPlan = (planName) => {
             if (!planName || typeof planName !== 'string') return false;
-            const upper = planName.toUpperCase();
-            return upper.includes("NUTRI") || upper.includes("COMBO");
+            return planName.toUpperCase().includes("NUTRI") || planName.toUpperCase().includes("COMBO");
         };
 
         const isPlusPlan = (planName, isAlreadyNutri) => {
             if (isAlreadyNutri) return false; 
             if (!planName || typeof planName !== 'string') return false;
-            const upper = planName.toUpperCase();
-            return upper.includes("PLUS");
+            return planName.toUpperCase().includes("PLUS");
         };
 
         const findSmartColumns = (headerRow, firstDataRow) => {
-            let planIdx = -1;
-            let valIdx = -1;
-
+            let planIdx = -1; let valIdx = -1;
             if (headerRow) {
                 const headers = headerRow.map(h => String(h).toUpperCase());
                 headers.forEach((h, i) => {
@@ -164,7 +174,6 @@
                     if (h.includes('PLANO') || h.includes('PRODUTO') || h.includes('DESCRIÇÃO')) planIdx = i;
                 });
             }
-
             if ((planIdx === -1 || valIdx === -1) && firstDataRow) {
                 firstDataRow.forEach((cell, i) => {
                     const txt = String(cell);
@@ -172,10 +181,8 @@
                     if (planIdx === -1 && (txt.toUpperCase().includes('SI') || txt.toUpperCase().includes('PRATIQUE'))) planIdx = i;
                 });
             }
-
-            if (planIdx === -1) planIdx = 12; // Default M
-            if (valIdx === -1) valIdx = 19;   // Default T
-
+            if (planIdx === -1) planIdx = 12; 
+            if (valIdx === -1) valIdx = 19;   
             return { planIdx, valIdx };
         };
 
@@ -187,99 +194,180 @@
             return 0;
         };
 
-        // --- COMPONENTS ---
-
-        const ConfigModal = ({ isOpen, onClose, allPlans, overrides, onToggleOverride }) => {
+        // --- Config Modal (Acessível independente da etapa) ---
+        const ConfigModal = ({ isOpen, onClose, allPlans, entradasPlans, unitOverrides, groupOverrides, onToggleUnitOverride, onToggleGroupOverride }) => {
             const [searchTerm, setSearchTerm] = useState('');
+            const [activeTab, setActiveTab] = useState('unidades');
+            const [feedback, setFeedback] = useState(false);
             
             if (!isOpen) return null;
 
-            const si1Plans = [];
-            const si2Plans = [];
+            const handleUnitOverride = (plan, targetUnit) => {
+                onToggleUnitOverride(plan, targetUnit);
+                showFeedback();
+            };
 
+            const handleGroupOverride = (plan, targetGroup) => {
+                onToggleGroupOverride(plan, targetGroup);
+                showFeedback();
+            };
+
+            const showFeedback = () => {
+                setFeedback(true);
+                setTimeout(() => setFeedback(false), 2000);
+            };
+
+            const si1Plans = []; const si2Plans = []; const ignoredPlans = [];
             allPlans.forEach(plan => {
                 if (!plan.toLowerCase().includes(searchTerm.toLowerCase())) return;
-                
-                const unit = getUnit(plan, overrides);
-                if (unit === 'SI1') si1Plans.push(plan);
+                const unit = getUnit(plan, unitOverrides);
+                if (unit === 'IGNORE') ignoredPlans.push(plan);
+                else if (unit === 'SI1') si1Plans.push(plan);
                 else si2Plans.push(plan);
             });
+            si1Plans.sort(); si2Plans.sort(); ignoredPlans.sort();
 
-            si1Plans.sort();
-            si2Plans.sort();
+            const groupsSI1 = { NUTRI: [], PLUS: [], FIT: [], CLASS: [], OUTROS: [] };
+            const groupsSI2 = { NUTRI: [], PLUS: [], FIT: [], CLASS: [], OUTROS: [] };
+
+            entradasPlans.forEach(plan => {
+                if (!plan.toLowerCase().includes(searchTerm.toLowerCase())) return;
+                const unit = getUnit(plan, unitOverrides);
+                if (unit === 'IGNORE') return; 
+
+                const grupo = classificarGrupoEntrada(plan, groupOverrides);
+                if (unit === 'SI1') {
+                    if (groupsSI1[grupo]) groupsSI1[grupo].push(plan);
+                } else if (unit === 'SI2') {
+                    if (groupsSI2[grupo]) groupsSI2[grupo].push(plan);
+                }
+            });
+            
+            Object.keys(groupsSI1).forEach(k => groupsSI1[k].sort());
+            Object.keys(groupsSI2).forEach(k => groupsSI2[k].sort());
+
+            const PlanUnitCard = ({ plan, currentUnit }) => (
+                <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 flex flex-col gap-2 transition-all hover:shadow-md">
+                    <span className="text-xs font-semibold text-gray-800 truncate" title={plan}>{plan}</span>
+                    <select value={currentUnit} onChange={(e) => handleUnitOverride(plan, e.target.value)} className="text-xs bg-gray-50 border border-gray-300 text-gray-700 rounded p-1.5 focus:ring-1 focus:ring-gray-400 outline-none w-full">
+                        <option value="SI1">Santa Inês 1</option>
+                        <option value="SI2">Santa Inês 2</option>
+                        <option value="IGNORE">Não Classificado</option>
+                    </select>
+                </div>
+            );
+
+            const PlanGroupCard = ({ plan, currentGroup }) => (
+                <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 flex flex-col gap-2 transition-all hover:shadow-md">
+                    <span className="text-xs font-semibold text-gray-800 truncate" title={plan}>{plan}</span>
+                    <select value={currentGroup} onChange={(e) => handleGroupOverride(plan, e.target.value)} className="text-xs bg-gray-50 border border-gray-300 text-gray-700 rounded p-1.5 focus:ring-1 focus:ring-gray-400 outline-none w-full">
+                        <option value="NUTRI">🥗 NUTRI</option>
+                        <option value="PLUS">⭐ PLUS</option>
+                        <option value="FIT">🏃 FIT</option>
+                        <option value="CLASS">🏋️ CLASS</option>
+                        <option value="OUTROS">🧩 OUTROS PLANOS</option>
+                    </select>
+                </div>
+            );
+
+            const renderGroupColumn = (title, plans, borderColor, bgColor, textColor) => (
+                <div className={`flex flex-col bg-white rounded-xl shadow-sm border-t-4 ${borderColor} overflow-hidden border border-gray-100`}>
+                    <div className={`p-2 ${bgColor} ${textColor} font-bold text-center border-b border-gray-100 uppercase text-xs flex justify-between px-3 items-center`}>
+                        <span>{title}</span>
+                        <span className="bg-white/50 px-2 rounded-full text-[10px]">{plans.length}</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-2 space-y-2 max-h-[350px]">
+                        {plans.length > 0 
+                            ? plans.map(p => <PlanGroupCard key={p} plan={p} currentGroup={classificarGrupoEntrada(p, groupOverrides)} />)
+                            : <div className="text-[10px] text-gray-400 text-center py-4 italic">Nenhum plano.</div>
+                        }
+                    </div>
+                </div>
+            );
 
             return (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-70 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col animate-up">
-                        <div className="p-4 border-b flex justify-between items-center rounded-t-xl bg-gray-900 text-white">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-[1400px] max-h-[90vh] flex flex-col animate-up">
+                        <div className="p-4 border-b flex flex-col md:flex-row justify-between items-center rounded-t-xl bg-gray-900 text-white gap-4">
                             <div className="flex items-center gap-2">
                                 <Icons.Settings />
-                                <h3 className="font-bold text-lg font-display uppercase tracking-wide">Configuração do Sistema</h3>
+                                <h3 className="font-bold text-lg font-display uppercase tracking-wide">Central de Classificação</h3>
                             </div>
-                            <button onClick={onClose} className="hover:bg-white/20 p-1 rounded-full transition-colors">
-                                <Icons.Close />
-                            </button>
+                            <div className="flex bg-gray-800 rounded-lg p-1 gap-1">
+                                <button onClick={() => setActiveTab('unidades')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-colors ${activeTab === 'unidades' ? 'bg-pratique-red text-white' : 'text-gray-400 hover:text-white'}`}>1. Por Unidade</button>
+                                <button onClick={() => setActiveTab('grupos')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-colors ${activeTab === 'grupos' ? 'bg-pratique-red text-white' : 'text-gray-400 hover:text-white'}`}>2. Por Grupos (Entradas)</button>
+                            </div>
+                            <button onClick={onClose} className="hover:bg-white/20 p-1 rounded-full transition-colors"><Icons.Close /></button>
                         </div>
                         
                         <div className="p-4 border-b bg-white">
-                            <input 
-                                type="text" 
-                                placeholder="Pesquisar nome do plano para classificar..." 
-                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pratique-red outline-none"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                            <input type="text" placeholder="Pesquisar por nomenclatura específica..." className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pratique-red outline-none text-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                         </div>
 
-                        <div className="flex-1 overflow-hidden p-4 flex flex-col md:flex-row gap-4">
-                            <div className="flex-1 flex flex-col bg-red-50 rounded-xl border border-red-100 overflow-hidden">
-                                <div className="p-3 bg-red-100 text-pratique-red font-bold text-center border-b border-red-200 uppercase text-sm">
-                                    Santa Inês 1 ({si1Plans.length})
+                        {activeTab === 'unidades' ? (
+                            <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-3 gap-6 bg-gray-50">
+                                <div className="flex flex-col bg-white rounded-xl shadow-sm border-t-4 border-pratique-red overflow-hidden">
+                                    <div className="p-3 bg-red-50 text-pratique-red font-bold text-center border-b border-red-100 uppercase text-sm">Santa Inês 1 ({si1Plans.length})</div>
+                                    <div className="flex-1 overflow-y-auto p-3 space-y-3">{si1Plans.map(p => <PlanUnitCard key={p} plan={p} currentUnit="SI1" />)}</div>
                                 </div>
-                                <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                                    {si1Plans.map(plan => (
-                                        <div key={plan} className="bg-white p-3 rounded-lg shadow-sm border border-red-100 flex justify-between items-center group hover:shadow-md transition-all">
-                                            <span className="text-sm font-medium text-gray-700 truncate mr-2" title={plan}>{plan}</span>
-                                            <button 
-                                                onClick={() => onToggleOverride(plan, 'SI2')}
-                                                className="text-gray-400 hover:text-gray-900 bg-gray-100 hover:bg-gray-300 p-1 rounded transition-colors flex-shrink-0"
-                                                title="Mover para Santa Inês 2"
-                                            >
-                                                <Icons.Swap />
-                                            </button>
-                                        </div>
-                                    ))}
-                                    {si1Plans.length === 0 && <p className="text-center text-gray-400 text-sm mt-10">Nenhum plano encontrado.</p>}
+                                <div className="flex flex-col bg-white rounded-xl shadow-sm border-t-4 border-gray-800 overflow-hidden">
+                                    <div className="p-3 bg-gray-100 text-gray-800 font-bold text-center border-b border-gray-200 uppercase text-sm">Santa Inês 2 ({si2Plans.length})</div>
+                                    <div className="flex-1 overflow-y-auto p-3 space-y-3">{si2Plans.map(p => <PlanUnitCard key={p} plan={p} currentUnit="SI2" />)}</div>
+                                </div>
+                                <div className="flex flex-col bg-white rounded-xl shadow-sm border-t-4 border-slate-400 overflow-hidden">
+                                    <div className="p-3 bg-slate-100 text-slate-700 text-center border-b border-slate-200 flex flex-col"><span className="font-bold uppercase text-sm">Não Classificados ({ignoredPlans.length})</span><span className="text-[10px] text-slate-500 mt-1 leading-tight">Planos não entram em métricas.</span></div>
+                                    <div className="flex-1 overflow-y-auto p-3 space-y-3">{ignoredPlans.map(p => <PlanUnitCard key={p} plan={p} currentUnit="IGNORE" />)}</div>
                                 </div>
                             </div>
+                        ) : (
+                            <div className="flex-1 overflow-y-auto p-6 bg-gray-50 flex flex-col gap-8">
+                                <div className="flex flex-col">
+                                    <p className="text-gray-500 text-sm mb-4">
+                                        <strong className="text-gray-700">1.</strong> Defina a unidade de cada nomenclatura primeiro. <br/>
+                                        <strong className="text-gray-700">2.</strong> Depois revise o grupo comercial das Entradas abaixo.
+                                    </p>
 
-                            <div className="flex-1 flex flex-col bg-gray-100 rounded-xl border border-gray-200 overflow-hidden">
-                                <div className="p-3 bg-gray-200 text-gray-800 font-bold text-center border-b border-gray-300 uppercase text-sm">
-                                    Santa Inês 2 ({si2Plans.length})
-                                </div>
-                                <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                                    {si2Plans.map(plan => (
-                                        <div key={plan} className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 flex justify-between items-center group hover:shadow-md transition-all">
-                                            <button 
-                                                onClick={() => onToggleOverride(plan, 'SI1')}
-                                                className="text-gray-400 hover:text-pratique-red bg-gray-100 hover:bg-red-100 p-1 rounded transition-colors flex-shrink-0"
-                                                title="Mover para Santa Inês 1"
-                                            >
-                                                <Icons.Swap />
-                                            </button>
-                                            <span className="text-sm font-medium text-gray-700 truncate ml-2 text-right" title={plan}>{plan}</span>
+                                    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-8 relative">
+                                        <h4 className="font-display text-lg font-bold text-pratique-red uppercase mb-4 border-b pb-2 flex justify-between">
+                                            <span>SANTA INÊS 1</span>
+                                            <span className="text-sm font-sans text-gray-400 normal-case">{
+                                                groupsSI1.NUTRI.length + groupsSI1.PLUS.length + groupsSI1.FIT.length + groupsSI1.CLASS.length + groupsSI1.OUTROS.length
+                                            } Nomenclaturas mapeadas</span>
+                                        </h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                                            {renderGroupColumn("🥗 NUTRI", groupsSI1.NUTRI, "border-green-500", "bg-green-50", "text-green-700")}
+                                            {renderGroupColumn("⭐ PLUS", groupsSI1.PLUS, "border-yellow-500", "bg-yellow-50", "text-yellow-700")}
+                                            {renderGroupColumn("🏃 FIT", groupsSI1.FIT, "border-blue-500", "bg-blue-50", "text-blue-700")}
+                                            {renderGroupColumn("🏋️ CLASS", groupsSI1.CLASS, "border-teal-500", "bg-teal-50", "text-teal-700")}
+                                            {renderGroupColumn("🧩 OUTROS", groupsSI1.OUTROS, "border-gray-500", "bg-gray-100", "text-gray-700")}
                                         </div>
-                                    ))}
-                                    {si2Plans.length === 0 && <p className="text-center text-gray-400 text-sm mt-10">Nenhum plano encontrado.</p>}
+                                    </div>
+
+                                    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 relative">
+                                        <h4 className="font-display text-lg font-bold text-gray-800 uppercase mb-4 border-b pb-2 flex justify-between">
+                                            <span>SANTA INÊS 2</span>
+                                            <span className="text-sm font-sans text-gray-400 normal-case">{
+                                                groupsSI2.NUTRI.length + groupsSI2.PLUS.length + groupsSI2.FIT.length + groupsSI2.CLASS.length + groupsSI2.OUTROS.length
+                                            } Nomenclaturas mapeadas</span>
+                                        </h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                                            {renderGroupColumn("🥗 NUTRI", groupsSI2.NUTRI, "border-green-500", "bg-green-50", "text-green-700")}
+                                            {renderGroupColumn("⭐ PLUS", groupsSI2.PLUS, "border-yellow-500", "bg-yellow-50", "text-yellow-700")}
+                                            {renderGroupColumn("🏃 FIT", groupsSI2.FIT, "border-blue-500", "bg-blue-50", "text-blue-700")}
+                                            {renderGroupColumn("🏋️ CLASS", groupsSI2.CLASS, "border-teal-500", "bg-teal-50", "text-teal-700")}
+                                            {renderGroupColumn("🧩 OUTROS", groupsSI2.OUTROS, "border-gray-500", "bg-gray-100", "text-gray-700")}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
-                        <div className="p-4 border-t bg-gray-50 rounded-b-xl flex justify-between items-center">
-                            <span className="text-xs text-gray-500">Alterações salvas automaticamente.</span>
-                            <button onClick={onClose} className="bg-gray-800 text-white px-6 py-2 rounded-lg font-bold hover:bg-gray-700 transition-colors">
-                                Concluir
-                            </button>
+                        <div className="p-4 border-t bg-white rounded-b-xl flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <span className="text-xs text-gray-500">Alterações salvas e recalculadas automaticamente.</span>
+                                <span className={`text-xs font-bold text-green-600 transition-opacity duration-300 ${feedback ? 'opacity-100' : 'opacity-0'}`}>✓ Atualizado</span>
+                            </div>
+                            <button onClick={onClose} className="bg-gray-900 text-white px-8 py-2.5 rounded-lg font-bold hover:bg-pratique-red transition-colors shadow-sm">Concluir Revisão</button>
                         </div>
                     </div>
                 </div>
@@ -288,60 +376,40 @@
 
         const DetailModal = ({ isOpen, onClose, title, items, colorClass }) => {
             if (!isOpen) return null;
-
             const groupedItems = useMemo(() => {
                 if (!items) return [];
                 const groups = {};
                 items.forEach(item => {
                     const key = `${item.name}||${item.value}`;
-                    if (!groups[key]) {
-                        groups[key] = { name: item.name, value: item.value, count: 0, total: 0 };
-                    }
+                    if (!groups[key]) groups[key] = { name: item.name, value: item.value, count: 0, total: 0 };
                     groups[key].count += 1;
                     groups[key].total += item.value;
                 });
                 return Object.values(groups).sort((a, b) => b.total - a.total);
             }, [items]);
-
             const grandTotal = groupedItems.reduce((acc, curr) => acc + curr.total, 0);
             const totalCount = groupedItems.reduce((acc, curr) => acc + curr.count, 0);
-
             return (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm animate-fade-in">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col animate-up">
                         <div className={`p-4 border-b flex justify-between items-center rounded-t-xl ${colorClass} text-white`}>
                             <h3 className="font-bold text-lg font-display uppercase tracking-wide">{title}</h3>
-                            <button onClick={onClose} className="hover:bg-white/20 p-1 rounded-full transition-colors">
-                                <Icons.Close />
-                            </button>
+                            <button onClick={onClose} className="hover:bg-white/20 p-1 rounded-full transition-colors"><Icons.Close /></button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-0">
                             {groupedItems && groupedItems.length > 0 ? (
                                 <table className="w-full text-sm text-left text-gray-500">
                                     <thead className="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0 z-10 shadow-sm">
-                                        <tr>
-                                            <th className="px-6 py-3 font-bold w-1/2">Nome do Plano</th>
-                                            <th className="px-6 py-3 text-center font-bold">Qtd.</th>
-                                            <th className="px-6 py-3 text-right font-bold">Valor Unit.</th>
-                                            <th className="px-6 py-3 text-right font-bold">Total</th>
-                                        </tr>
+                                        <tr><th className="px-6 py-3 font-bold w-1/2">Nome do Plano</th><th className="px-6 py-3 text-center font-bold">Qtd.</th><th className="px-6 py-3 text-right font-bold">Valor Unit.</th><th className="px-6 py-3 text-right font-bold">Total</th></tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
                                         {groupedItems.map((item, index) => (
-                                            <tr key={index} className="bg-white hover:bg-gray-50 transition-colors">
-                                                <td className="px-6 py-3 font-medium text-gray-900 truncate max-w-xs" title={item.name}>{item.name}</td>
-                                                <td className="px-6 py-3 text-center text-gray-600 font-semibold bg-gray-50/50">{item.count}</td>
-                                                <td className="px-6 py-3 text-right text-gray-600">{formatCurrency(item.value)}</td>
-                                                <td className="px-6 py-3 text-right text-gray-900 font-bold bg-gray-50/50">{formatCurrency(item.total)}</td>
-                                            </tr>
+                                            <tr key={index} className="bg-white hover:bg-gray-50 transition-colors"><td className="px-6 py-3 font-medium text-gray-900 truncate max-w-xs">{item.name}</td><td className="px-6 py-3 text-center text-gray-600 font-semibold bg-gray-50/50">{item.count}</td><td className="px-6 py-3 text-right text-gray-600">{formatCurrency(item.value)}</td><td className="px-6 py-3 text-right text-gray-900 font-bold bg-gray-50/50">{formatCurrency(item.total)}</td></tr>
                                         ))}
                                     </tbody>
                                 </table>
                             ) : (
-                                <div className="text-center py-12 text-gray-400 flex flex-col items-center gap-2">
-                                    <Icons.Leaf />
-                                    <p>Nenhum item encontrado.</p>
-                                </div>
+                                <div className="text-center py-12 text-gray-400 flex flex-col items-center gap-2"><Icons.Leaf /><p>Nenhum item encontrado.</p></div>
                             )}
                         </div>
                         <div className="p-4 border-t bg-gray-50 rounded-b-xl flex justify-between items-center text-sm">
@@ -353,21 +421,63 @@
             );
         };
 
-        // --- AI REPORT MODAL ---
+        const EntradasDetailModal = ({ isOpen, onClose, title, itemsMap, colorClass }) => {
+            if (!isOpen) return null;
+            
+            const sortedItems = useMemo(() => {
+                if (!itemsMap) return [];
+                return Object.entries(itemsMap)
+                    .map(([name, count]) => ({ name, count }))
+                    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+            }, [itemsMap]);
+
+            const totalCount = sortedItems.reduce((acc, curr) => acc + curr.count, 0);
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col animate-up">
+                        <div className={`p-4 border-b flex justify-between items-center rounded-t-xl ${colorClass} text-white`}>
+                            <h3 className="font-bold text-lg font-display uppercase tracking-wide">{title}</h3>
+                            <button onClick={onClose} className="hover:bg-white/20 p-1 rounded-full transition-colors"><Icons.Close /></button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-0">
+                            {sortedItems && sortedItems.length > 0 ? (
+                                <table className="w-full text-sm text-left text-gray-500">
+                                    <thead className="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0 z-10 shadow-sm">
+                                        <tr>
+                                            <th className="px-6 py-3 font-bold">NOME DO PLANO</th>
+                                            <th className="px-6 py-3 text-right font-bold w-32">QUANTIDADE</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {sortedItems.map((item, index) => (
+                                            <tr key={index} className="bg-white hover:bg-gray-50 transition-colors">
+                                                <td className="px-6 py-3 font-medium text-gray-900">{item.name}</td>
+                                                <td className="px-6 py-3 text-right text-gray-900 font-bold bg-gray-50/50">{formatNumber(item.count)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <div className="text-center py-12 text-gray-400 flex flex-col items-center gap-2"><Icons.Leaf /><p>Nenhum item encontrado neste grupo.</p></div>
+                            )}
+                        </div>
+                        <div className="p-4 border-t bg-gray-50 rounded-b-xl flex justify-end items-center text-sm">
+                            <span className="font-bold text-gray-500 uppercase tracking-wide">TOTAL: <span className="text-gray-900 text-xl ml-2 font-display">{formatNumber(totalCount)}</span></span>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const AiReportModal = ({ isOpen, onClose, markdownReport, isLoading }) => {
             if (!isOpen) return null;
-
             return (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-70 backdrop-blur-sm animate-fade-in">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col animate-up border-2 border-indigo-500">
                         <div className="p-4 border-b flex justify-between items-center rounded-t-xl bg-indigo-600 text-white">
-                            <div className="flex items-center gap-2">
-                                <Icons.Robot />
-                                <h3 className="font-bold text-lg font-display uppercase tracking-wide">Relatório Executivo IA</h3>
-                            </div>
-                            <button onClick={onClose} className="hover:bg-white/20 p-1 rounded-full transition-colors">
-                                <Icons.Close />
-                            </button>
+                            <div className="flex items-center gap-2"><Icons.Robot /><h3 className="font-bold text-lg font-display uppercase tracking-wide">Relatório Executivo IA</h3></div>
+                            <button onClick={onClose} className="hover:bg-white/20 p-1 rounded-full transition-colors"><Icons.Close /></button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-8 prose max-w-none">
                             {isLoading ? (
@@ -379,175 +489,249 @@
                                 <div dangerouslySetInnerHTML={{ __html: marked.parse(markdownReport) }} />
                             )}
                         </div>
-                        <div className="p-4 border-t bg-gray-50 rounded-b-xl text-center text-xs text-gray-400">
-                            Gerado por Google Gemini 2.5 Flash. Verifique sempre os dados originais.
-                        </div>
+                        <div className="p-4 border-t bg-gray-50 rounded-b-xl text-center text-xs text-gray-400">Gerado por Google Gemini 1.5 Flash. Verifique sempre os dados originais.</div>
                     </div>
                 </div>
             );
         };
 
-        const FileCard = ({ title, type, onUpload, status, subtext, colorClass = "hover:border-pratique-red hover:bg-white", activeColorClass = "border-green-500 bg-green-50", iconColorClass = "group-hover:text-pratique-red group-hover:bg-red-50" }) => (
-            <div className={`relative p-4 rounded-xl border-2 border-dashed transition-all ${status ? activeColorClass : `border-gray-300 ${colorClass}`} group flex-1`}>
-                <input type="file" accept=".xlsx,.xls,.csv" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => { if (e.target.files[0]) onUpload(e.target.files[0]); }} />
-                <div className="flex flex-col items-center justify-center text-center">
+        const FileCard = ({ title, onUpload, status }) => (
+            <div className={`relative p-4 rounded-xl border-2 border-dashed transition-all ${status ? "border-green-500 bg-green-50" : "border-gray-300 hover:border-pratique-red hover:bg-white"} group flex flex-col justify-between h-full`}>
+                <input type="file" accept=".xlsx,.xls,.csv" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={(e) => { if (e.target.files[0]) onUpload(e.target.files[0]); e.target.value = null; }} />
+                <div className="flex flex-col items-center justify-center text-center flex-1">
                     {status ? (
                         <>
                             <div className="bg-green-100 text-green-600 p-2 rounded-full mb-2"><Icons.Check /></div>
-                            <span className="font-bold text-gray-800 text-sm">{title} OK</span>
+                            <span className="font-bold text-gray-800 text-sm">{title}</span>
+                            <span className="text-xs font-bold text-green-600 mt-1">✓ Carregado</span>
                         </>
                     ) : (
                         <>
-                            <div className={`bg-gray-100 text-gray-500 p-2 rounded-full mb-2 transition-colors ${iconColorClass}`}><Icons.Upload /></div>
-                            <span className={`font-bold text-gray-600 text-sm transition-colors ${iconColorClass.replace('bg-', 'text-').split(' ')[0]}`}>{title}</span>
-                            <span className="text-xs text-gray-400 mt-1">{subtext}</span>
+                            <div className={`bg-gray-100 text-gray-500 p-2 rounded-full mb-2 transition-colors group-hover:text-pratique-red group-hover:bg-red-50`}><Icons.Upload /></div>
+                            <span className={`font-bold text-gray-600 text-sm transition-colors group-hover:text-pratique-red`}>{title}</span>
                         </>
                     )}
+                </div>
+                <div className="mt-3 text-center border-t border-gray-200/50 pt-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                        {status ? 'Arquivo OK' : 'Anexar Planilha'}
+                    </span>
                 </div>
             </div>
         );
 
-        const UnitColumn = ({ unit, sales, receipts, receivables, actives, isSI2, onOpenModal }) => {
+        const UnitColumn = ({ unit, sales, receipts, receivables, actives, entradas, cancelados, isSI2, onOpenModal, onOpenEntradasModal, flags }) => {
             const bgHeader = isSI2 ? 'bg-gray-900' : 'bg-pratique-red';
             const textClass = isSI2 ? 'text-gray-900' : 'text-pratique-red';
 
+            const CompBadge = ({ label, count, onClick, colorClass }) => (
+                <div onClick={onClick} className={`rounded-lg p-2 border ${colorClass} flex flex-col items-center justify-center cursor-pointer hover:shadow-md transition-all`}>
+                    <span className="text-[10px] font-bold uppercase text-center w-full truncate">{label}</span>
+                    <span className="text-lg font-bold mt-0.5">{formatNumber(count)}</span>
+                </div>
+            );
+
+            const renderMoneyCard = (title, hasData, value, icon, borderColorClass, iconBgClass) => (
+                <div className={`bg-white p-6 rounded-xl card-shadow border-l-4 ${borderColorClass}`}>
+                    <div className="flex justify-between items-start mb-2">
+                        <span className="text-gray-500 font-bold text-sm uppercase tracking-wider">{title}</span>
+                        <div className={`p-2 rounded-lg ${iconBgClass}`}>{icon}</div>
+                    </div>
+                    {hasData ? (
+                        <div className="text-3xl font-display font-bold text-gray-800">{formatCurrency(value)}</div>
+                    ) : (
+                        <div className="text-lg text-gray-400 font-medium mt-1">Não carregado</div>
+                    )}
+                </div>
+            );
+
+            const renderCountCard = (title, hasData, value, icon, borderColorClass, iconBgClass) => (
+                <div className={`bg-white p-6 rounded-xl card-shadow border-l-4 ${borderColorClass}`}>
+                    <div className="flex justify-between items-start mb-2">
+                        <span className="text-gray-500 font-bold text-sm uppercase tracking-wider">{title}</span>
+                        <div className={`p-2 rounded-lg ${iconBgClass}`}>{icon}</div>
+                    </div>
+                    {hasData ? (
+                        <div className="text-4xl font-display font-bold text-gray-800">{formatNumber(value)}</div>
+                    ) : (
+                        <div className="text-lg text-gray-400 font-medium mt-1">Não carregado</div>
+                    )}
+                </div>
+            );
+
             return (
-                <div className="flex-1 flex flex-col gap-6">
+                <div className="flex-1 flex flex-col gap-6 animate-fade-in">
                     <div className={`p-4 rounded-t-xl ${bgHeader} text-white shadow-lg`}>
                         <h2 className="text-3xl font-display font-bold text-center tracking-wide">{unit}</h2>
                     </div>
                     
-                    {/* Card Faturamento */}
+                    {/* Faturamento */}
                     <div className="bg-white p-6 rounded-xl card-shadow border-l-4 border-gray-200 relative overflow-hidden group transition-all" style={{borderColor: isSI2 ? '#111827' : '#ED1C24'}}>
                         <div className="flex justify-between items-start mb-2">
                             <span className="text-gray-500 font-bold text-sm uppercase tracking-wider">Faturamento (Período)</span>
                             <div className={`p-2 rounded-lg ${isSI2 ? 'bg-gray-100 text-gray-800' : 'bg-red-50 text-red-600'}`}><Icons.Money /></div>
                         </div>
-                        <div className={`text-4xl font-display font-bold ${textClass} mb-4`}>
-                            {formatCurrency(sales?.total || 0)}
-                        </div>
-                        <div className="flex flex-col gap-3 pt-4 border-t border-gray-100">
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-gray-400 font-bold uppercase">Total Vendas</span>
-                                <span className="text-xl font-bold text-gray-700">{formatNumber(sales?.count || 0)}</span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3 mt-2">
-                                <div className={`rounded-lg p-3 bg-green-50 border border-green-100 flex flex-col justify-between`}>
-                                    <div>
-                                        <div className="flex items-center gap-1 mb-1">
-                                            <div className="text-green-600"><Icons.Leaf /></div>
-                                            <span className="text-xs font-bold uppercase text-green-700">Nutri/Combo</span>
-                                        </div>
-                                        <p className="text-2xl font-bold text-green-800 mb-2">{formatNumber(sales?.nutriCount || 0)}</p>
-                                    </div>
-                                    <button onClick={() => onOpenModal('Nutri/Combo', sales?.nutriList, 'bg-green-600')} className="text-[10px] font-bold uppercase tracking-wider text-green-600 bg-green-100 hover:bg-green-200 py-1 px-2 rounded w-full text-center transition-colors flex items-center justify-center gap-1">
-                                        <Icons.Eye /> Detalhamento
-                                    </button>
+                        {flags.hasSales ? (
+                            <>
+                                <div className={`text-4xl font-display font-bold ${textClass} mb-4`}>
+                                    {formatCurrency(sales?.total || 0)}
                                 </div>
-                                <div className={`rounded-lg p-3 bg-yellow-50 border border-yellow-100 flex flex-col justify-between`}>
-                                    <div>
-                                        <div className="flex items-center gap-1 mb-1">
-                                            <div className="text-yellow-600"><Icons.Star /></div>
-                                            <span className="text-xs font-bold uppercase text-yellow-700">Plano Plus</span>
-                                        </div>
-                                        <p className="text-2xl font-bold text-yellow-800 mb-2">{formatNumber(sales?.plusCount || 0)}</p>
+                                <div className="flex flex-col gap-3 pt-4 border-t border-gray-100">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs text-gray-400 font-bold uppercase">Total Vendas</span>
+                                        <span className="text-xl font-bold text-gray-700">{formatNumber(sales?.count || 0)}</span>
                                     </div>
-                                    <button onClick={() => onOpenModal('Plano Plus', sales?.plusList, 'bg-yellow-600')} className="text-[10px] font-bold uppercase tracking-wider text-yellow-700 bg-yellow-100 hover:bg-yellow-200 py-1 px-2 rounded w-full text-center transition-colors flex items-center justify-center gap-1">
-                                        <Icons.Eye /> Detalhamento
-                                    </button>
+                                    <div className="grid grid-cols-2 gap-3 mt-2">
+                                        <div className={`rounded-lg p-3 bg-green-50 border border-green-100 flex flex-col justify-between`}>
+                                            <div>
+                                                <div className="flex items-center gap-1 mb-1">
+                                                    <div className="text-green-600"><Icons.Leaf /></div>
+                                                    <span className="text-xs font-bold uppercase text-green-700">Nutri/Combo</span>
+                                                </div>
+                                                <p className="text-2xl font-bold text-green-800 mb-2">{formatNumber(sales?.nutriCount || 0)}</p>
+                                            </div>
+                                            <button onClick={() => onOpenModal('Nutri/Combo', sales?.nutriList, 'bg-green-600')} className="text-[10px] font-bold uppercase tracking-wider text-green-600 bg-green-100 hover:bg-green-200 py-1 px-2 rounded w-full text-center transition-colors flex items-center justify-center gap-1">
+                                                <Icons.Eye /> Detalhamento
+                                            </button>
+                                        </div>
+                                        <div className={`rounded-lg p-3 bg-yellow-50 border border-yellow-100 flex flex-col justify-between`}>
+                                            <div>
+                                                <div className="flex items-center gap-1 mb-1">
+                                                    <div className="text-yellow-600"><Icons.Star /></div>
+                                                    <span className="text-xs font-bold uppercase text-yellow-700">Plano Plus</span>
+                                                </div>
+                                                <p className="text-2xl font-bold text-yellow-800 mb-2">{formatNumber(sales?.plusCount || 0)}</p>
+                                            </div>
+                                            <button onClick={() => onOpenModal('Plano Plus', sales?.plusList, 'bg-yellow-600')} className="text-[10px] font-bold uppercase tracking-wider text-yellow-700 bg-yellow-100 hover:bg-yellow-200 py-1 px-2 rounded w-full text-center transition-colors flex items-center justify-center gap-1">
+                                                <Icons.Eye /> Detalhamento
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
+                            </>
+                        ) : (
+                            <div className="text-lg text-gray-400 font-medium mt-1">Não carregado</div>
+                        )}
                     </div>
 
-                    {/* Card Recebimento (Caixa) */}
+                    {/* Recebimento */}
                     <div className="bg-white p-6 rounded-xl card-shadow border-l-4 border-green-500">
                         <div className="flex justify-between items-start mb-2">
                             <span className="text-gray-500 font-bold text-sm uppercase tracking-wider">Recebimento (Caixa)</span>
                             <div className="p-2 rounded-lg bg-green-50 text-green-600"><Icons.Check /></div>
                         </div>
-                        <div className="text-3xl font-display font-bold text-gray-800">
-                            {formatCurrency(receipts?.total || 0)}
-                        </div>
-                        <p className="text-xs text-gray-400 mt-2">Valor efetivamente baixado</p>
+                        {flags.hasReceipts ? (
+                            <>
+                                <div className="text-3xl font-display font-bold text-gray-800">
+                                    {formatCurrency(receipts?.total || 0)}
+                                </div>
+                                {isSI2 && receipts?.personalClassCount !== undefined && (
+                                    <div className="mt-4 pt-4 border-t border-gray-100">
+                                        <div className="rounded-lg p-3 bg-teal-50 border border-teal-100 flex flex-col justify-between">
+                                            <div>
+                                                <div className="flex items-center gap-1 mb-1">
+                                                    <div className="text-teal-600"><Icons.Users /></div>
+                                                    <span className="text-xs font-bold uppercase text-teal-700">Personal Class</span>
+                                                </div>
+                                                <p className="text-2xl font-bold text-teal-800 mb-1">
+                                                    {formatNumber(receipts.personalClassCount)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <div className="text-lg text-gray-400 font-medium mt-1">Não carregado</div>
+                        )}
                     </div>
 
-                    {/* Novo Card: Recebíveis (A compensar) */}
-                    <div className="bg-white p-6 rounded-xl card-shadow border-l-4 border-purple-500">
-                        <div className="flex justify-between items-start mb-2">
-                            <span className="text-gray-500 font-bold text-sm uppercase tracking-wider">Recebíveis</span>
-                            <div className="p-2 rounded-lg bg-purple-50 text-purple-600"><Icons.CreditCard /></div>
-                        </div>
-                        <div className="text-3xl font-display font-bold text-gray-800">
-                            {formatCurrency(receivables?.total || 0)}
-                        </div>
-                        <p className="text-xs text-gray-400 mt-2">Valores compensados/a receber</p>
-                    </div>
+                    {/* Recebíveis */}
+                    {renderMoneyCard("Recebíveis", flags.hasReceivables, receivables?.total, <Icons.CreditCard />, "border-purple-500", "bg-purple-50 text-purple-600")}
 
-                    {/* Card Alunos Ativos */}
-                    <div className="bg-white p-6 rounded-xl card-shadow border-l-4 border-blue-500">
+                    {/* Entradas */}
+                    <div className="bg-white p-6 rounded-xl card-shadow border-l-4 border-orange-500">
                          <div className="flex justify-between items-start mb-2">
-                            <span className="text-gray-500 font-bold text-sm uppercase tracking-wider">Alunos Ativos</span>
-                            <div className="p-2 rounded-lg bg-blue-50 text-blue-600"><Icons.Users /></div>
+                            <span className="text-gray-500 font-bold text-sm uppercase tracking-wider">Entradas</span>
+                            <div className="p-2 rounded-lg bg-orange-50 text-orange-600"><Icons.Swap /></div>
                         </div>
-                        <div className="text-4xl font-display font-bold text-gray-800">
-                            {formatNumber(actives?.count || 0)}
-                        </div>
-                        <p className="text-xs text-gray-400 mt-2">Base atual de alunos</p>
+                        {flags.hasEntradas ? (
+                            <>
+                                <div className="text-4xl font-display font-bold text-gray-800 mb-4">
+                                    {formatNumber(entradas?.count || 0)}
+                                </div>
+                                {entradas?.grupos && (
+                                    <div className="pt-4 border-t border-gray-100">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Composição das Entradas</span>
+                                            <span className="text-[10px] text-gray-400 flex items-center gap-1"><Icons.Eye /> Ver detalhes</span>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <CompBadge label="🥗 NUTRI" count={entradas.grupos.NUTRI.count} colorClass="bg-green-50 text-green-700 border-green-200" onClick={() => onOpenEntradasModal(`NUTRI — ${unit}`, entradas.grupos.NUTRI.itens, 'bg-green-600')} />
+                                            <CompBadge label="⭐ PLUS" count={entradas.grupos.PLUS.count} colorClass="bg-yellow-50 text-yellow-700 border-yellow-200" onClick={() => onOpenEntradasModal(`PLUS — ${unit}`, entradas.grupos.PLUS.itens, 'bg-yellow-600')} />
+                                            <CompBadge label="🏃 FIT" count={entradas.grupos.FIT.count} colorClass="bg-blue-50 text-blue-700 border-blue-200" onClick={() => onOpenEntradasModal(`FIT — ${unit}`, entradas.grupos.FIT.itens, 'bg-blue-600')} />
+                                            <CompBadge label="🏋️ CLASS" count={entradas.grupos.CLASS.count} colorClass="bg-teal-50 text-teal-700 border-teal-200" onClick={() => onOpenEntradasModal(`CLASS — ${unit}`, entradas.grupos.CLASS.itens, 'bg-teal-600')} />
+                                            <div className="col-span-2">
+                                                <CompBadge label="🧩 OUTROS" count={entradas.grupos.OUTROS.count} colorClass="bg-gray-100 text-gray-700 border-gray-300" onClick={() => onOpenEntradasModal(`OUTROS PLANOS — ${unit}`, entradas.grupos.OUTROS.itens, 'bg-gray-700')} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <div className="text-lg text-gray-400 font-medium mt-1">Não carregado</div>
+                        )}
                     </div>
+
+                    {/* Ativos */}
+                    {renderCountCard("Alunos Ativos", flags.hasActives, actives?.count, <Icons.Users />, "border-blue-500", "bg-blue-50 text-blue-600")}
+
+                    {/* Cancelados */}
+                    {renderCountCard("Cancelados", flags.hasCancelados, cancelados?.count, <Icons.UserMinus />, "border-pink-500", "bg-pink-50 text-pink-600")}
                 </div>
             );
         };
 
-        const FooterSummary = ({ sales, receipts, receivables, actives, onGenerateAiReport }) => {
+        const FooterSummary = ({ sales, receipts, receivables, actives, entradas, cancelados, visitantes, flags }) => {
             const totalFaturamento = (sales?.si1.total || 0) + (sales?.si2.total || 0);
             const totalRecebido = (receipts?.si1.total || 0) + (receipts?.si2.total || 0);
             const totalRecebiveis = (receivables?.si1.total || 0) + (receivables?.si2.total || 0);
             const totalAtivos = (actives?.si1.count || 0) + (actives?.si2.count || 0);
-            const totalNutri = (sales?.si1.nutriCount || 0) + (sales?.si2.nutriCount || 0);
-            const totalPlus = (sales?.si1.plusCount || 0) + (sales?.si2.plusCount || 0);
+            const totalEntradas = (entradas?.si1.count || 0) + (entradas?.si2.count || 0);
+            const totalCancelados = (cancelados?.si1.count || 0) + (cancelados?.si2.count || 0);
+            const vTotais = visitantes?.visitantes || 0;
+            const vWellhub = visitantes?.wellhub || 0;
+
+            const ValCard = ({ title, hasData, value, valueClass }) => (
+                <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
+                    <p className="text-gray-400 text-[10px] font-bold uppercase mb-1">{title}</p>
+                    {hasData ? (
+                        <p className={`text-xl font-display font-bold break-words ${valueClass}`}>{value}</p>
+                    ) : (
+                        <p className="text-sm font-medium text-gray-500 mt-1">Não carregado</p>
+                    )}
+                </div>
+            );
 
             return (
-                <div className="mt-16 animate-up" style={{animationDelay: '0.4s'}}>
-                    <div className="bg-gray-900 rounded-t-2xl p-8 text-white shadow-2xl border-t-4 border-pratique-red relative overflow-hidden">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <div className="mt-8 animate-up" style={{animationDelay: '0.4s'}}>
+                    <div className="bg-gray-900 rounded-2xl p-8 text-white shadow-2xl border-t-4 border-pratique-red relative overflow-hidden">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-gray-700 pb-6">
                             <div className="flex items-center gap-2">
                                 <Icons.Chart />
                                 <h3 className="text-2xl font-display font-bold uppercase tracking-wider">Consolidado Geral</h3>
                             </div>
-                            <button 
-                                onClick={onGenerateAiReport}
-                                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold shadow-lg transition-all transform hover:scale-105 border border-indigo-400"
-                            >
-                                <Icons.Sparkles /> Análise IA
-                            </button>
                         </div>
                         
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                            <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                                <p className="text-gray-400 text-[10px] font-bold uppercase mb-1">Faturamento Total</p>
-                                <p className="text-xl xl:text-2xl font-display font-bold text-white break-words">{formatCurrency(totalFaturamento)}</p>
-                            </div>
-                            <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                                <p className="text-gray-400 text-[10px] font-bold uppercase mb-1">Recebimento (Caixa)</p>
-                                <p className="text-xl xl:text-2xl font-display font-bold text-green-400 break-words">{formatCurrency(totalRecebido)}</p>
-                            </div>
-                            <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                                <p className="text-gray-400 text-[10px] font-bold uppercase mb-1">Recebíveis Total</p>
-                                <p className="text-xl xl:text-2xl font-display font-bold text-purple-400 break-words">{formatCurrency(totalRecebiveis)}</p>
-                            </div>
-                             <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                                <p className="text-gray-400 text-[10px] font-bold uppercase mb-1">Total Nutri/Combo</p>
-                                <p className="text-xl xl:text-2xl font-display font-bold text-green-200">{formatNumber(totalNutri)}</p>
-                            </div>
-                            <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                                <p className="text-gray-400 text-[10px] font-bold uppercase mb-1">Total Plus</p>
-                                <p className="text-xl xl:text-2xl font-display font-bold text-yellow-400">{formatNumber(totalPlus)}</p>
-                            </div>
-                             <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                                <p className="text-gray-400 text-[10px] font-bold uppercase mb-1">Total Ativos</p>
-                                <p className="text-xl xl:text-2xl font-display font-bold text-blue-400">{formatNumber(totalAtivos)}</p>
-                            </div>
+                        <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
+                            <ValCard title="Faturamento" hasData={flags.hasSales} value={formatCurrency(totalFaturamento)} valueClass="text-white" />
+                            <ValCard title="Caixa" hasData={flags.hasReceipts} value={formatCurrency(totalRecebido)} valueClass="text-green-400" />
+                            <ValCard title="Recebíveis" hasData={flags.hasReceivables} value={formatCurrency(totalRecebiveis)} valueClass="text-purple-400" />
+                            <ValCard title="Entradas" hasData={flags.hasEntradas} value={formatNumber(totalEntradas)} valueClass="text-orange-400" />
+                            <ValCard title="Ativos" hasData={flags.hasActives} value={formatNumber(totalAtivos)} valueClass="text-blue-400" />
+                            <ValCard title="Cancelados" hasData={flags.hasCancelados} value={formatNumber(totalCancelados)} valueClass="text-pink-400" />
+                            <ValCard title="Vis. Globais" hasData={flags.hasVisitantes} value={formatNumber(vTotais)} valueClass="text-sky-400" />
+                            <ValCard title="Vis. Wellhub" hasData={flags.hasVisitantes} value={formatNumber(vWellhub)} valueClass="text-sky-400" />
                         </div>
                     </div>
                 </div>
@@ -555,24 +739,34 @@
         };
 
         const Dashboard = () => {
+            const [etapa, setEtapa] = useState('IMPORTACAO'); // 'IMPORTACAO' | 'CONFERENCIA'
+
             const [rawSales, setRawSales] = useState(null);
             const [rawReceipts, setRawReceipts] = useState(null);
             const [rawReceivables, setRawReceivables] = useState(null);
             const [rawActives, setRawActives] = useState(null);
+            const [rawEntradas, setRawEntradas] = useState(null);
+            const [rawCancelados, setRawCancelados] = useState(null);
+            const [rawVisitantes, setRawVisitantes] = useState(null);
             
             const [salesData, setSalesData] = useState(null);
             const [receiptsData, setReceiptsData] = useState(null);
             const [receivablesData, setReceivablesData] = useState(null);
             const [activesData, setActivesData] = useState(null);
+            const [entradasData, setEntradasData] = useState(null);
+            const [canceladosData, setCanceladosData] = useState(null);
+            const [visitantesData, setVisitantesData] = useState(null);
             
             const [planOverrides, setPlanOverrides] = useState(() => {
-                try {
-                    const saved = localStorage.getItem('plan_overrides');
-                    return saved ? JSON.parse(saved) : {};
-                } catch (e) { return {}; }
+                try { const saved = localStorage.getItem('plan_overrides'); return saved ? JSON.parse(saved) : {}; } catch (e) { return {}; }
+            });
+
+            const [entradasGroupOverrides, setEntradasGroupOverrides] = useState(() => {
+                try { const saved = localStorage.getItem('entradas_group_overrides'); return saved ? JSON.parse(saved) : {}; } catch (e) { return {}; }
             });
 
             const [allPlans, setAllPlans] = useState(new Set());
+            const [entradasPlans, setEntradasPlans] = useState(new Set());
             const [configOpen, setConfigOpen] = useState(false);
             
             const [modalOpen, setModalOpen] = useState(false);
@@ -580,138 +774,188 @@
             const [modalItems, setModalItems] = useState([]);
             const [modalColor, setModalColor] = useState('bg-gray-800');
 
-            const [aiModalOpen, setAiModalOpen] = useState(false);
-            const [aiLoading, setAiLoading] = useState(false);
-            const [aiReport, setAiReport] = useState('');
+            const [entModalOpen, setEntModalOpen] = useState(false);
+            const [entModalTitle, setEntModalTitle] = useState('');
+            const [entModalItemsMap, setEntModalItemsMap] = useState({});
+            const [entModalColor, setEntModalColor] = useState('bg-gray-800');
 
-            const openModal = (title, items, color) => {
-                setModalTitle(title);
-                setModalItems(items || []);
-                setModalColor(color);
-                setModalOpen(true);
+            // Email Status
+            const [emailStatus, setEmailStatus] = useState(null); // { success: boolean, message: string }
+            const [sendingEmail, setSendingEmail] = useState(false);
+
+            useEffect(() => { localStorage.setItem('plan_overrides', JSON.stringify(planOverrides)); }, [planOverrides]);
+            useEffect(() => { localStorage.setItem('entradas_group_overrides', JSON.stringify(entradasGroupOverrides)); }, [entradasGroupOverrides]);
+
+            const openModal = (title, items, color) => { setModalTitle(title); setModalItems(items || []); setModalColor(color); setModalOpen(true); };
+            const openEntradasModal = (title, itemsMap, color) => { setEntModalTitle(title); setEntModalItemsMap(itemsMap || {}); setEntModalColor(color); setEntModalOpen(true); };
+
+            const flags = {
+                hasSales: !!rawSales,
+                hasReceipts: !!rawReceipts,
+                hasReceivables: !!rawReceivables,
+                hasActives: !!rawActives,
+                hasEntradas: !!rawEntradas,
+                hasCancelados: !!rawCancelados,
+                hasVisitantes: !!rawVisitantes
             };
 
-            useEffect(() => {
-                localStorage.setItem('plan_overrides', JSON.stringify(planOverrides));
-            }, [planOverrides]);
+            const loadedCount = Object.values(flags).filter(Boolean).length;
+            const isReadyToView = loadedCount >= 3;
 
-            const generateAiReport = async () => {
-                setAiModalOpen(true);
-                setAiLoading(true);
+            const getValidationErrors = () => {
+                const errs = [];
+                if (flags.hasEntradas && entradasData) {
+                    const si1Groups = entradasData.si1.grupos;
+                    if (si1Groups) {
+                        const sumSI1 = si1Groups.NUTRI.count + si1Groups.PLUS.count + si1Groups.FIT.count + si1Groups.CLASS.count + si1Groups.OUTROS.count;
+                        if (sumSI1 !== entradasData.si1.count) errs.push('A composição das Entradas da Santa Inês 1 não fecha.');
+                    }
+                    const si2Groups = entradasData.si2.grupos;
+                    if (si2Groups) {
+                        const sumSI2 = si2Groups.NUTRI.count + si2Groups.PLUS.count + si2Groups.FIT.count + si2Groups.CLASS.count + si2Groups.OUTROS.count;
+                        if (sumSI2 !== entradasData.si2.count) errs.push('A composição das Entradas da Santa Inês 2 não fecha.');
+                    }
+                }
+                return errs;
+            };
 
-                const stats = {
-                    SI1: {
-                        faturamento: salesData?.si1.total || 0,
-                        recebimento: receiptsData?.si1.total || 0,
-                        recebiveis: receivablesData?.si1.total || 0,
-                        ativos: activesData?.si1.count || 0,
-                        nutri: salesData?.si1.nutriCount || 0,
-                        plus: salesData?.si1.plusCount || 0
+            const montarPayloadFechamento = () => {
+                const now = new Date();
+                const dataStr = now.toLocaleDateString('pt-BR');
+                const horaStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                return {
+                    enviadoEm: now.toISOString(),
+                    dataStr,
+                    horaStr,
+                    arquivos: flags,
+                    si1: {
+                        faturamento: flags.hasSales ? (salesData?.si1.total || 0) : null,
+                        recebimento: flags.hasReceipts ? (receiptsData?.si1.total || 0) : null,
+                        recebiveis: flags.hasReceivables ? (receivablesData?.si1.total || 0) : null,
+                        ativos: flags.hasActives ? (activesData?.si1.count || 0) : null,
+                        entradas: flags.hasEntradas ? (entradasData?.si1.count || 0) : null,
+                        cancelados: flags.hasCancelados ? (canceladosData?.si1.count || 0) : null,
+                        gruposEntradas: flags.hasEntradas && entradasData?.si1.grupos ? {
+                            nutri: entradasData.si1.grupos.NUTRI.count,
+                            plus: entradasData.si1.grupos.PLUS.count,
+                            fit: entradasData.si1.grupos.FIT.count,
+                            class: entradasData.si1.grupos.CLASS.count,
+                            outros: entradasData.si1.grupos.OUTROS.count,
+                        } : null
                     },
-                    SI2: {
-                        faturamento: salesData?.si2.total || 0,
-                        recebimento: receiptsData?.si2.total || 0,
-                        recebiveis: receivablesData?.si2.total || 0,
-                        ativos: activesData?.si2.count || 0,
-                        nutri: salesData?.si2.nutriCount || 0,
-                        plus: salesData?.si2.plusCount || 0
+                    si2: {
+                        faturamento: flags.hasSales ? (salesData?.si2.total || 0) : null,
+                        recebimento: flags.hasReceipts ? (receiptsData?.si2.total || 0) : null,
+                        recebiveis: flags.hasReceivables ? (receivablesData?.si2.total || 0) : null,
+                        ativos: flags.hasActives ? (activesData?.si2.count || 0) : null,
+                        entradas: flags.hasEntradas ? (entradasData?.si2.count || 0) : null,
+                        cancelados: flags.hasCancelados ? (canceladosData?.si2.count || 0) : null,
+                        personalClass: flags.hasReceipts ? (receiptsData?.si2.personalClassCount || 0) : null,
+                        gruposEntradas: flags.hasEntradas && entradasData?.si2.grupos ? {
+                            nutri: entradasData.si2.grupos.NUTRI.count,
+                            plus: entradasData.si2.grupos.PLUS.count,
+                            fit: entradasData.si2.grupos.FIT.count,
+                            class: entradasData.si2.grupos.CLASS.count,
+                            outros: entradasData.si2.grupos.OUTROS.count,
+                        } : null
+                    },
+                    globais: flags.hasVisitantes ? {
+                        visitantes: visitantesData?.visitantes || 0,
+                        visitantesWellhub: visitantesData?.wellhub || 0
+                    } : null,
+                    consolidado: {
+                        faturamento: flags.hasSales ? ((salesData?.si1.total || 0) + (salesData?.si2.total || 0)) : null,
+                        recebimento: flags.hasReceipts ? ((receiptsData?.si1.total || 0) + (receiptsData?.si2.total || 0)) : null,
+                        recebiveis: flags.hasReceivables ? ((receivablesData?.si1.total || 0) + (receivablesData?.si2.total || 0)) : null,
+                        ativos: flags.hasActives ? ((activesData?.si1.count || 0) + (activesData?.si2.count || 0)) : null,
+                        entradas: flags.hasEntradas ? ((entradasData?.si1.count || 0) + (entradasData?.si2.count || 0)) : null,
+                        cancelados: flags.hasCancelados ? ((canceladosData?.si1.count || 0) + (canceladosData?.si2.count || 0)) : null
+                    },
+                    configuracao: {
+                        si1: Array.from(allPlans).filter(p => getUnit(p, planOverrides) === 'SI1').length,
+                        si2: Array.from(allPlans).filter(p => getUnit(p, planOverrides) === 'SI2').length,
+                        ignorados: Array.from(allPlans).filter(p => getUnit(p, planOverrides) === 'IGNORE').length
                     }
                 };
+            };
 
-                const prompt = `
-                    Atue como um Diretor Financeiro Sênior da Rede de Academias Pratique.
-                    Analise os dados financeiros abaixo para as unidades Santa Inês 1 (SI1) e Santa Inês 2 (SI2).
-                    
-                    DADOS:
-                    - Faturamento (Vendas Período): SI1: ${formatCurrency(stats.SI1.faturamento)}, SI2: ${formatCurrency(stats.SI2.faturamento)}
-                    - Recebimento Real (Caixa): SI1: ${formatCurrency(stats.SI1.recebimento)}, SI2: ${formatCurrency(stats.SI2.recebimento)}
-                    - Recebíveis (A Compensar): SI1: ${formatCurrency(stats.SI1.recebiveis)}, SI2: ${formatCurrency(stats.SI2.recebiveis)}
-                    - Base de Alunos Ativos: SI1: ${stats.SI1.ativos}, SI2: ${stats.SI2.ativos}
-                    - Vendas Plano Nutri/Combo: SI1: ${stats.SI1.nutri}, SI2: ${stats.SI2.nutri}
-                    - Vendas Plano Plus: SI1: ${stats.SI1.plus}, SI2: ${stats.SI2.plus}
+            const handleVisualizarDados = async () => {
+                if (!isReadyToView || sendingEmail) return;
 
-                    TAREFA:
-                    1. Crie um resumo executivo comparando o desempenho das duas unidades.
-                    2. Analise a relação entre Faturamento, Caixa (Recebimento) e Valores a Receber (Recebíveis).
-                    3. Qual unidade tem melhor performance de produtos agregados (Nutri/Plus) proporcionalmente ao faturamento?
-                    4. Sugira 3 ações estratégicas para o gestor melhorar a conversão de Recebíveis em Caixa.
+                const errors = getValidationErrors();
+                if (errors.length > 0) {
+                    alert("Atenção:\n" + errors.join('\n') + "\nPor favor, revise a aba Configuração antes de visualizar os dados.");
+                    return;
+                }
 
-                    Formate a resposta em Markdown limpo e profissional. Seja direto e use bullet points.
-                `;
+                // Altera para a visualização imediatamente
+                setEtapa('CONFERENCIA');
+                setSendingEmail(true);
+                setEmailStatus(null);
+                
+                const payload = montarPayloadFechamento();
 
                 try {
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${defaultApiKey}`, {
+                    // Sem mock local. Se rodar fora da Vercel, o catch capturará o erro normalmente.
+                    const res = await fetch('/api/enviar-fechamento', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                        body: JSON.stringify(payload)
                     });
-                    
-                    const data = await response.json();
-                    if (data.error) throw new Error(data.error.message);
-                    
-                    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Não foi possível gerar o relatório.";
-                    setAiReport(text);
+
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Falha na resposta do servidor.');
+
+                    setEmailStatus({ success: true, message: 'Resumo encaminhado ao serviço de envio com sucesso.' });
                 } catch (error) {
-                    console.error(error);
-                    setAiReport(`Erro ao gerar relatório: ${error.message}. Verifique sua API Key.`);
+                    console.error("Erro no envio do email:", error);
+                    setEmailStatus({ success: false, message: 'Não foi possível enviar o resumo. A visualização continua disponível.' });
                 } finally {
-                    setAiLoading(false);
+                    setSendingEmail(false);
                 }
             };
 
             useEffect(() => {
-                if (rawSales) calculateSales(rawSales);
-                if (rawReceipts) calculateReceipts(rawReceipts);
-                if (rawReceivables) calculateReceivables(rawReceivables);
-                if (rawActives) calculateActives(rawActives);
-            }, [planOverrides, rawSales, rawReceipts, rawReceivables, rawActives]);
+                if (rawSales) calculateSales(rawSales); if (rawReceipts) calculateReceipts(rawReceipts);
+                if (rawReceivables) calculateReceivables(rawReceivables); if (rawActives) calculateActives(rawActives);
+                if (rawEntradas) calculateEntradas(rawEntradas); if (rawCancelados) calculateCancelados(rawCancelados);
+                if (rawVisitantes) calculateVisitantes(rawVisitantes);
+            }, [planOverrides, entradasGroupOverrides, rawSales, rawReceipts, rawReceivables, rawActives, rawEntradas, rawCancelados, rawVisitantes]);
 
-            const updatePlanList = (newPlans) => {
-                setAllPlans(prev => {
-                    const next = new Set(prev);
-                    newPlans.forEach(p => next.add(p));
-                    return next;
-                });
-            };
+            const updatePlanList = (newPlans) => { setAllPlans(prev => { const next = new Set(prev); newPlans.forEach(p => next.add(p)); return next; }); };
+            const updateEntradasPlanList = (newPlans) => { setEntradasPlans(prev => { const next = new Set(prev); newPlans.forEach(p => next.add(p)); return next; }); };
 
-            const toggleOverride = (plan, targetUnit) => {
-                setPlanOverrides(prev => ({ ...prev, [plan]: targetUnit }));
-            };
+            const toggleUnitOverride = (plan, targetUnit) => setPlanOverrides(prev => ({ ...prev, [plan]: targetUnit }));
+            const toggleGroupOverride = (plan, targetGroup) => setEntradasGroupOverrides(prev => ({ ...prev, [plan]: targetGroup }));
 
             const calculateSales = (data) => {
-                let stats = { 
-                    si1: { total: 0, count: 0, nutriCount: 0, plusCount: 0, nutriList: [], plusList: [] }, 
-                    si2: { total: 0, count: 0, nutriCount: 0, plusCount: 0, nutriList: [], plusList: [] } 
-                };
+                let stats = { si1: { total: 0, count: 0, nutriCount: 0, plusCount: 0, nutriList: [], plusList: [] }, si2: { total: 0, count: 0, nutriCount: 0, plusCount: 0, nutriList: [], plusList: [] } };
                 data.rows.forEach(row => {
-                    const val = parseMoney(row[data.valIdx]);
-                    const plan = row[data.planIdx];
-                    if(!plan) return;
-                    const unit = getUnit(plan, planOverrides);
-                    const isNutri = isNutriPlan(plan);
-                    const isPlus = isPlusPlan(plan, isNutri);
-                    const itemDetail = { name: plan, value: val };
+                    const val = parseMoney(row[data.valIdx]); const plan = row[data.planIdx]; if(!plan) return;
+                    const unit = getUnit(plan, planOverrides); if (unit === 'IGNORE') return;
+                    const isNutri = isNutriPlan(plan); const isPlus = isPlusPlan(plan, isNutri); const itemDetail = { name: plan, value: val };
                     if (unit === 'SI2') {
                         stats.si2.total += val; stats.si2.count++;
-                        if (isNutri) { stats.si2.nutriCount++; stats.si2.nutriList.push(itemDetail); }
-                        else if (isPlus) { stats.si2.plusCount++; stats.si2.plusList.push(itemDetail); }
+                        if (isNutri) { stats.si2.nutriCount++; stats.si2.nutriList.push(itemDetail); } else if (isPlus) { stats.si2.plusCount++; stats.si2.plusList.push(itemDetail); }
                     } else {
                         stats.si1.total += val; stats.si1.count++;
-                        if (isNutri) { stats.si1.nutriCount++; stats.si1.nutriList.push(itemDetail); }
-                        else if (isPlus) { stats.si1.plusCount++; stats.si1.plusList.push(itemDetail); }
+                        if (isNutri) { stats.si1.nutriCount++; stats.si1.nutriList.push(itemDetail); } else if (isPlus) { stats.si1.plusCount++; stats.si1.plusList.push(itemDetail); }
                     }
                 });
                 setSalesData(stats);
             };
 
             const calculateReceipts = (data) => {
-                let stats = { si1: { total: 0 }, si2: { total: 0 } };
+                let stats = { si1: { total: 0 }, si2: { total: 0, personalClassCount: 0 } };
                 data.rows.forEach(row => {
-                    const val = parseMoney(row[data.valIdx]);
-                    const plan = row[data.planIdx];
-                    if(!plan) return;
-                    const unit = getUnit(plan, planOverrides);
-                    if (unit === 'SI2') stats.si2.total += val; else stats.si1.total += val;
+                    const val = parseMoney(row[data.valIdx]); const plan = row[data.planIdx]; if(!plan) return;
+                    const unit = getUnit(plan, planOverrides); if (unit === 'IGNORE') return;
+                    if (unit === 'SI2') {
+                        stats.si2.total += val;
+                        const nomePlano = String(plan || '').trim().replace(/\s+/g, ' ').toUpperCase();
+                        if (nomePlano.startsWith('SANTA INES 2 | CLASS')) stats.si2.personalClassCount++;
+                    } else { stats.si1.total += val; }
                 });
                 setReceiptsData(stats);
             };
@@ -719,106 +963,119 @@
             const calculateReceivables = (data) => {
                 let stats = { si1: { total: 0 }, si2: { total: 0 } };
                 data.rows.forEach(row => {
-                    const val = parseMoney(row[data.valIdx]);
-                    const plan = row[data.planIdx];
-                    if(!plan) return;
-                    const unit = getUnit(plan, planOverrides);
-                    if (unit === 'SI2') stats.si2.total += val; else stats.si1.total += val;
+                    const val = parseMoney(row[data.valIdx]); const plan = row[data.planIdx]; if(!plan) return;
+                    const unit = getUnit(plan, planOverrides); if (unit === 'IGNORE') return;
+                    if (unit === 'SI2') { stats.si2.total += val; } else { stats.si1.total += val; }
                 });
                 setReceivablesData(stats);
             };
 
             const calculateActives = (data) => {
                 let stats = { si1: { count: 0 }, si2: { count: 0 } };
-                data.rows.forEach(row => {
-                    const plan = row[data.planIdx];
-                    if(!plan) return;
-                    const unit = getUnit(plan, planOverrides);
-                    if (unit === 'SI2') stats.si2.count++; else stats.si1.count++;
-                });
+                data.rows.forEach(row => { const plan = row[data.planIdx]; if(!plan) return; const unit = getUnit(plan, planOverrides); if (unit === 'IGNORE') return; if (unit === 'SI2') stats.si2.count++; else stats.si1.count++; });
                 setActivesData(stats);
             };
 
+            const calculateEntradas = (data) => {
+                const initGrupos = () => ({ NUTRI: { count: 0, itens: {} }, PLUS: { count: 0, itens: {} }, FIT: { count: 0, itens: {} }, CLASS: { count: 0, itens: {} }, OUTROS: { count: 0, itens: {} } });
+                let stats = { si1: { count: 0, grupos: initGrupos() }, si2: { count: 0, grupos: initGrupos() } };
+                
+                data.rows.forEach(row => {
+                    const plan = row[data.planIdx]; if(!plan) return;
+                    const unit = getUnit(plan, planOverrides); if (unit === 'IGNORE') return;
+
+                    const target = unit === 'SI2' ? stats.si2 : stats.si1;
+                    target.count++;
+                    const grupo = classificarGrupoEntrada(plan, entradasGroupOverrides);
+                    target.grupos[grupo].count++;
+                    target.grupos[grupo].itens[plan] = (target.grupos[grupo].itens[plan] || 0) + 1;
+                });
+                setEntradasData(stats);
+            };
+
+            const calculateCancelados = (data) => {
+                let stats = { si1: { count: 0 }, si2: { count: 0 } };
+                data.rows.forEach(row => { const plan = row[data.planIdx]; if(!plan) return; const unit = getUnit(plan, planOverrides); if (unit === 'IGNORE') return; if (unit === 'SI2') stats.si2.count++; else stats.si1.count++; });
+                setCanceladosData(stats);
+            };
+
+            const calculateVisitantes = (data) => {
+                let stats = { visitantes: 0, wellhub: 0 };
+                data.rows.forEach(row => { const valStr = String(row[data.colIdx] || '').trim().toUpperCase(); if (!valStr) return; if (valStr.includes('WELLHUB') || valStr.includes('GYMPASS')) { stats.wellhub++; } else if (valStr.includes('VISITANT')) { stats.visitantes++; } });
+                setVisitantesData(stats);
+            };
+
             const handleSalesUpload = (file) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const wb = XLSX.read(e.target.result, { type: 'binary' });
-                    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
-                    const hIdx = findHeader(json, ['PLANO', 'VALOR', 'PRODUTO', 'MATRÍCULA']);
-                    const { planIdx, valIdx } = findSmartColumns(json[hIdx], json[hIdx+1]);
-                    const rows = json.slice(hIdx + 1).filter(r => r && r[planIdx]);
-                    updatePlanList(rows.map(r => r[planIdx]).filter(Boolean));
-                    setRawSales({ rows, planIdx, valIdx });
-                };
-                reader.readAsBinaryString(file);
+                const reader = new FileReader(); reader.onload = (e) => {
+                    const wb = XLSX.read(e.target.result, { type: 'binary' }); const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+                    const hIdx = findHeader(json, ['PLANO', 'VALOR', 'PRODUTO', 'MATRÍCULA']); const { planIdx, valIdx } = findSmartColumns(json[hIdx], json[hIdx+1]);
+                    const rows = json.slice(hIdx + 1).filter(r => r && r[planIdx]); updatePlanList(rows.map(r => r[planIdx]).filter(Boolean)); setRawSales({ rows, planIdx, valIdx });
+                }; reader.readAsBinaryString(file);
             };
 
             const handleReceiptsUpload = (file) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const wb = XLSX.read(e.target.result, { type: 'binary' });
-                    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
-                    const hIdx = findHeader(json, ['PLANO', 'PAGO', 'RECEBIDO']);
-                    const { planIdx, valIdx } = findSmartColumns(json[hIdx], json[hIdx+1]);
-                    const rows = json.slice(hIdx + 1).filter(r => r && r[planIdx]);
-                    updatePlanList(rows.map(r => r[planIdx]).filter(Boolean));
-                    setRawReceipts({ rows, planIdx, valIdx });
-                };
-                reader.readAsBinaryString(file);
+                const reader = new FileReader(); reader.onload = (e) => {
+                    const wb = XLSX.read(e.target.result, { type: 'binary' }); const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+                    const hIdx = findHeader(json, ['PLANO', 'PAGO', 'RECEBIDO']); const { planIdx, valIdx } = findSmartColumns(json[hIdx], json[hIdx+1]);
+                    const rows = json.slice(hIdx + 1).filter(r => r && r[planIdx]); updatePlanList(rows.map(r => r[planIdx]).filter(Boolean)); setRawReceipts({ rows, planIdx, valIdx });
+                }; reader.readAsBinaryString(file);
             };
 
-            // Nova Função de Upload para Recebíveis
             const handleReceivablesUpload = (file) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const wb = XLSX.read(e.target.result, { type: 'binary' });
-                    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
-                    const hIdx = findHeader(json, ['PLANO', 'VALOR', 'RECEBER', 'COMPENSADO']);
-                    
-                    // Defaults baseados na solicitação: Plano na U(20), Valor na H(7)
-                    let planIdx = 20; 
-                    let valIdx = 7;   
-
-                    if (json[hIdx]) {
-                        const smart = findSmartColumns(json[hIdx], json[hIdx+1]);
-                        // Se encontrou algo de forma inteligente que não seja o padrão da função findSmartColumns (12 e 19)
-                        if(smart.planIdx !== 12) planIdx = smart.planIdx;
-                        if(smart.valIdx !== 19) valIdx = smart.valIdx;
-                    }
-
-                    const rows = json.slice(hIdx + 1).filter(r => r && r[planIdx]);
-                    updatePlanList(rows.map(r => r[planIdx]).filter(Boolean));
-                    setRawReceivables({ rows, planIdx, valIdx });
-                };
-                reader.readAsBinaryString(file);
+                const reader = new FileReader(); reader.onload = (e) => {
+                    const wb = XLSX.read(e.target.result, { type: 'binary' }); const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+                    const hIdx = findHeader(json, ['PLANO', 'VALOR', 'RECEBER', 'COMPENSADO']); let planIdx = 20; let valIdx = 7;   
+                    if (json[hIdx]) { const smart = findSmartColumns(json[hIdx], json[hIdx+1]); if(smart.planIdx !== 12) planIdx = smart.planIdx; if(smart.valIdx !== 19) valIdx = smart.valIdx; }
+                    const rows = json.slice(hIdx + 1).filter(r => r && r[planIdx]); updatePlanList(rows.map(r => r[planIdx]).filter(Boolean)); setRawReceivables({ rows, planIdx, valIdx });
+                }; reader.readAsBinaryString(file);
             };
 
             const handleActivesUpload = (file) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const wb = XLSX.read(e.target.result, { type: 'binary' });
-                    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
-                    const hIdx = findHeader(json, ['MATRÍCULA', 'PLANO']);
-                    let planIdx = 22;
-                    if (json[hIdx]) {
-                        const headers = json[hIdx].map(h => String(h).toUpperCase());
-                        const found = headers.findIndex(h => h === 'PLANO');
-                        if (found !== -1) planIdx = found;
-                    }
-                    const rows = json.slice(hIdx + 1).filter(r => r && (r[0] || r[planIdx]));
-                    updatePlanList(rows.map(r => r[planIdx]).filter(Boolean));
-                    setRawActives({ rows, planIdx });
-                };
-                reader.readAsBinaryString(file);
+                const reader = new FileReader(); reader.onload = (e) => {
+                    const wb = XLSX.read(e.target.result, { type: 'binary' }); const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+                    const hIdx = findHeader(json, ['MATRÍCULA', 'PLANO']); let planIdx = 22; if (json[hIdx]) { const headers = json[hIdx].map(h => String(h).toUpperCase()); const found = headers.findIndex(h => h === 'PLANO'); if (found !== -1) planIdx = found; }
+                    const rows = json.slice(hIdx + 1).filter(r => r && (r[0] || r[planIdx])); updatePlanList(rows.map(r => r[planIdx]).filter(Boolean)); setRawActives({ rows, planIdx });
+                }; reader.readAsBinaryString(file);
+            };
+
+            const handleEntradasUpload = (file) => {
+                const reader = new FileReader(); reader.onload = (e) => {
+                    const wb = XLSX.read(e.target.result, { type: 'binary' }); const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+                    const hIdx = findHeader(json, ['MATRÍCULA', 'PLANO', 'ENTRADA', 'NOME']); const planIdx = 23; 
+                    const rows = json.slice(hIdx + 1).filter(r => { if (!r) return false; const plan = r[planIdx]; if (!plan || String(plan).trim() === '' || String(plan).toUpperCase() === 'PLANO') return false; return true; });
+                    const extractedPlans = rows.map(r => r[planIdx]).filter(Boolean);
+                    updatePlanList(extractedPlans); updateEntradasPlanList(extractedPlans); 
+                    setRawEntradas({ rows, planIdx });
+                }; reader.readAsBinaryString(file);
+            };
+
+            const handleCanceladosUpload = (file) => {
+                const reader = new FileReader(); reader.onload = (e) => {
+                    const wb = XLSX.read(e.target.result, { type: 'binary' }); const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+                    const hIdx = findHeader(json, ['MATRÍCULA', 'PLANO', 'CANCELADO', 'NOME']); const planIdx = 23; 
+                    const rows = json.slice(hIdx + 1).filter(r => { if (!r) return false; const plan = r[planIdx]; if (!plan || String(plan).trim() === '' || String(plan).toUpperCase() === 'PLANO') return false; return true; });
+                    updatePlanList(rows.map(r => r[planIdx]).filter(Boolean)); setRawCancelados({ rows, planIdx });
+                }; reader.readAsBinaryString(file);
+            };
+
+            const handleVisitantesUpload = (file) => {
+                const reader = new FileReader(); reader.onload = (e) => {
+                    const wb = XLSX.read(e.target.result, { type: 'binary' }); const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+                    const colIdx = 9; const rows = json.slice(1).filter(r => r && r[colIdx]); setRawVisitantes({ rows, colIdx });
+                }; reader.readAsBinaryString(file);
             };
 
             const reset = () => {
-                if(confirm("Deseja realmente limpar todos os dados carregados?")) {
-                    setRawSales(null); setRawReceipts(null); setRawReceivables(null); setRawActives(null);
-                    setSalesData(null); setReceiptsData(null); setReceivablesData(null); setActivesData(null);
-                    setAllPlans(new Set());
+                if(confirm("Deseja realmente limpar a visualização? Todos os arquivos e dados atuais serão removidos.")) {
+                    setEtapa('IMPORTACAO');
+                    setRawSales(null); setRawReceipts(null); setRawReceivables(null); setRawActives(null); setRawEntradas(null); setRawCancelados(null); setRawVisitantes(null);
+                    setSalesData(null); setReceiptsData(null); setReceivablesData(null); setActivesData(null); setEntradasData(null); setCanceladosData(null); setVisitantesData(null);
+                    setAllPlans(new Set()); setEntradasPlans(new Set());
+                    setEmailStatus(null);
                 }
             };
+
+            const ignoredCount = Array.from(allPlans).filter(p => getUnit(p, planOverrides) === 'IGNORE').length;
 
             return (
                 <div className="min-h-screen p-4 md:p-8 max-w-[1400px] mx-auto flex flex-col">
@@ -827,7 +1084,7 @@
                             <div className="bg-pratique-red text-white p-3 rounded-lg font-display font-bold text-2xl">P</div>
                             <div>
                                 <h1 className="text-3xl font-display font-bold text-gray-800 uppercase tracking-tight">Painel Gestão <span className="text-pratique-red">Santa Inês</span></h1>
-                                <p className="text-gray-500 text-sm">Dashboard Financeiro & Operacional Offline + IA</p>
+                                <p className="text-gray-500 text-sm">Painel de Consulta Executiva</p>
                             </div>
                         </div>
                         <div className="flex gap-2">
@@ -840,34 +1097,127 @@
                         </div>
                     </header>
 
-                    {/* Modificado para grid com 4 colunas em telas médias/grandes */}
-                    <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10 animate-up" style={{animationDelay: '0.1s'}}>
-                        <FileCard title="1. Faturamento" subtext="Vendas no Período" onUpload={handleSalesUpload} status={!!rawSales} />
-                        <FileCard title="2. Recebimento" subtext="Valores em Caixa" onUpload={handleReceiptsUpload} status={!!rawReceipts} />
-                        <FileCard 
-                            title="3. Recebíveis" 
-                            subtext="Planos (Col U) e Valor (Col H)" 
-                            onUpload={handleReceivablesUpload} 
-                            status={!!rawReceivables}
-                            colorClass="hover:border-purple-500 hover:bg-white"
-                            iconColorClass="group-hover:text-purple-600 group-hover:bg-purple-50" 
-                        />
-                        <FileCard title="4. Ativos" subtext="Geral de Clientes" onUpload={handleActivesUpload} status={!!rawActives} />
-                    </section>
+                    {/* --- ETAPA 1: IMPORTAÇÃO --- */}
+                    {etapa === 'IMPORTACAO' && (
+                        <div className="animate-fade-in flex flex-col gap-8">
+                            <div className="text-center max-w-2xl mx-auto mb-4">
+                                <h2 className="text-2xl font-display font-bold text-gray-800 uppercase tracking-wide">Importar Dados</h2>
+                                <p className="text-gray-500 mt-2">Carregue no mínimo 3 fontes quaisquer para visualizar o painel.</p>
+                            </div>
 
-                    <main className="flex flex-col md:flex-row gap-8 animate-up flex-grow" style={{animationDelay: '0.2s'}}>
-                        <UnitColumn unit="SANTA INÊS 1" sales={salesData?.si1} receipts={receiptsData?.si1} receivables={receivablesData?.si1} actives={activesData?.si1} isSI2={false} onOpenModal={openModal} />
-                        <div className="hidden md:block w-px bg-gray-300 self-stretch"></div>
-                        <UnitColumn unit="SANTA INÊS 2" sales={salesData?.si2} receipts={receiptsData?.si2} receivables={receivablesData?.si2} actives={activesData?.si2} isSI2={true} onOpenModal={openModal} />
-                    </main>
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8">
+                                <div className="flex justify-between items-end mb-6">
+                                    <h3 className="font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2"><Icons.Upload /> Fontes de Dados</h3>
+                                </div>
 
-                    {(salesData || receiptsData || receivablesData || activesData) && (
-                        <FooterSummary sales={salesData} receipts={receiptsData} receivables={receivablesData} actives={activesData} onGenerateAiReport={generateAiReport} />
+                                <section className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                                    <FileCard title="1. Faturamento" onUpload={handleSalesUpload} status={flags.hasSales} />
+                                    <FileCard title="2. Recebimento" onUpload={handleReceiptsUpload} status={flags.hasReceipts} />
+                                    <FileCard title="3. Recebíveis" onUpload={handleReceivablesUpload} status={flags.hasReceivables} />
+                                    <FileCard title="4. Ativos" onUpload={handleActivesUpload} status={flags.hasActives} />
+                                    <FileCard title="5. Entradas" onUpload={handleEntradasUpload} status={flags.hasEntradas} />
+                                    <FileCard title="6. Cancelados" onUpload={handleCanceladosUpload} status={flags.hasCancelados} />
+                                    <FileCard title="7. Visitantes" onUpload={handleVisitantesUpload} status={flags.hasVisitantes} />
+                                </section>
+                            </div>
+
+                            <div className="flex flex-col items-center mt-2 gap-3">
+                                <p className={`text-sm font-bold ${isReadyToView ? 'text-green-600' : 'text-gray-400'}`}>
+                                    {isReadyToView ? `${loadedCount} fontes carregadas. Pronto para visualizar.` : `${loadedCount} de 3 fontes mínimas carregadas`}
+                                </p>
+                                
+                                <button 
+                                    onClick={handleVisualizarDados}
+                                    disabled={!isReadyToView || sendingEmail}
+                                    className={`px-10 py-4 rounded-xl font-bold text-lg uppercase tracking-wide transition-all shadow-lg flex items-center gap-3
+                                        ${isReadyToView ? 'bg-pratique-red text-white hover:bg-red-700 hover:shadow-xl hover:-translate-y-1' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                                >
+                                    {sendingEmail ? <><span className="loader"></span> PROCESSANDO...</> : <>VISUALIZAR DADOS <span className="text-2xl leading-none">→</span></>}
+                                </button>
+
+                                <p className="text-xs text-gray-400 mt-1">Ao visualizar os dados, um resumo será enviado ao gestor.</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- ETAPA 2: CONFERÊNCIA --- */}
+                    {etapa === 'CONFERENCIA' && (
+                        <div className="animate-fade-in flex flex-col gap-8">
+                            
+                            {/* StatusBar de E-mail / Navegação */}
+                            <div className="flex flex-col md:flex-row justify-between items-center bg-gray-900 text-white p-4 rounded-xl shadow-lg border-l-4 border-pratique-red gap-4">
+                                <div>
+                                    <h2 className="text-xl font-display font-bold uppercase tracking-wide">Visualização de Dados</h2>
+                                    <div className="mt-1 flex items-center gap-2 text-sm">
+                                        {sendingEmail ? (
+                                            <span className="text-yellow-400 flex items-center gap-2"><span className="loader w-3 h-3"></span> Enviando resumo ao gestor...</span>
+                                        ) : emailStatus?.success ? (
+                                            <span className="text-green-400">✓ {emailStatus.message}</span>
+                                        ) : emailStatus?.success === false ? (
+                                            <span className="text-red-400">⚠ {emailStatus.message}</span>
+                                        ) : (
+                                            <span className="text-gray-400">Dados baseados em {loadedCount} de 7 fontes.</span>
+                                        )}
+                                    </div>
+                                </div>
+                                <button onClick={() => setEtapa('IMPORTACAO')} className="flex items-center gap-2 text-sm bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors font-medium border border-gray-700 w-full md:w-auto justify-center">
+                                    <Icons.ArrowLeft /> Voltar para Importação
+                                </button>
+                            </div>
+
+                            {ignoredCount > 0 && (
+                                <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl flex items-start gap-3 shadow-sm">
+                                    <div className="text-yellow-600 mt-0.5"><Icons.Alert /></div>
+                                    <div>
+                                        <p className="text-sm font-bold text-yellow-800">Aviso Operacional</p>
+                                        <p className="text-xs text-yellow-700 mt-1">Existem <strong>{ignoredCount} nomenclaturas</strong> marcadas como "Não Classificados" na Configuração. Elas não estão compondo os resultados abaixo.</p>
+                                    </div>
+                                    <button onClick={() => setConfigOpen(true)} className="ml-auto text-xs font-bold uppercase text-yellow-700 hover:text-yellow-900 underline">Revisar Configuração</button>
+                                </div>
+                            )}
+
+                            <main className="flex flex-col md:flex-row gap-8 flex-grow">
+                                <UnitColumn unit="SANTA INÊS 1" sales={salesData?.si1} receipts={receiptsData?.si1} receivables={receivablesData?.si1} actives={activesData?.si1} entradas={entradasData?.si1} cancelados={canceladosData?.si1} isSI2={false} onOpenModal={openModal} onOpenEntradasModal={openEntradasModal} flags={flags} />
+                                <div className="hidden md:block w-px bg-gray-300 self-stretch"></div>
+                                <UnitColumn unit="SANTA INÊS 2" sales={salesData?.si2} receipts={receiptsData?.si2} receivables={receivablesData?.si2} actives={activesData?.si2} entradas={entradasData?.si2} cancelados={canceladosData?.si2} isSI2={true} onOpenModal={openModal} onOpenEntradasModal={openEntradasModal} flags={flags} />
+                            </main>
+
+                            <div className="mt-4">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <h3 className="text-xl font-display font-bold text-gray-700 uppercase tracking-wider">Indicadores Gerais da Operação</h3>
+                                    <div className="h-px bg-gray-300 flex-1 ml-2"></div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+                                    <div className="bg-white p-6 rounded-xl card-shadow border-l-4 border-sky-500">
+                                        <div className="flex justify-between items-start mb-2"><span className="text-gray-500 font-bold text-sm uppercase tracking-wider">Visitantes</span><div className="p-2 rounded-lg bg-sky-50 text-sky-600"><Icons.Users /></div></div>
+                                        {flags.hasVisitantes ? (
+                                            <div className="text-4xl font-display font-bold text-gray-800">{formatNumber(visitantesData?.visitantes)}</div>
+                                        ) : (
+                                            <div className="text-lg text-gray-400 font-medium mt-1">Não carregado</div>
+                                        )}
+                                    </div>
+                                    <div className="bg-white p-6 rounded-xl card-shadow border-l-4 border-sky-500">
+                                        <div className="flex justify-between items-start mb-2"><span className="text-gray-500 font-bold text-sm uppercase tracking-wider">Visitantes - Wellhub</span><div className="p-2 rounded-lg bg-sky-50 text-sky-600"><Icons.Users /></div></div>
+                                        {flags.hasVisitantes ? (
+                                            <div className="text-4xl font-display font-bold text-gray-800">{formatNumber(visitantesData?.wellhub)}</div>
+                                        ) : (
+                                            <div className="text-lg text-gray-400 font-medium mt-1">Não carregado</div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <FooterSummary 
+                                sales={salesData} receipts={receiptsData} receivables={receivablesData} 
+                                actives={activesData} entradas={entradasData} cancelados={canceladosData} 
+                                visitantes={visitantesData} flags={flags}
+                            />
+                        </div>
                     )}
 
                     <DetailModal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={modalTitle} items={modalItems} colorClass={modalColor} />
-                    <ConfigModal isOpen={configOpen} onClose={() => setConfigOpen(false)} allPlans={Array.from(allPlans)} overrides={planOverrides} onToggleOverride={toggleOverride} />
-                    <AiReportModal isOpen={aiModalOpen} onClose={() => setAiModalOpen(false)} markdownReport={aiReport} isLoading={aiLoading} />
+                    <EntradasDetailModal isOpen={entModalOpen} onClose={() => setEntModalOpen(false)} title={entModalTitle} itemsMap={entModalItemsMap} colorClass={entModalColor} />
+                    <ConfigModal isOpen={configOpen} onClose={() => setConfigOpen(false)} allPlans={Array.from(allPlans)} entradasPlans={Array.from(entradasPlans)} unitOverrides={planOverrides} groupOverrides={entradasGroupOverrides} onToggleUnitOverride={toggleUnitOverride} onToggleGroupOverride={toggleGroupOverride} />
                 </div>
             );
         };
